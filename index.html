@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8"/>
-<title>日本2D地震地図：官制版 [J-SHIS高精度地盤補正モデル V4対応 & 震央推定機能]</title>
+<title>日本2D地震地図：官制版 [J-SHIS高精度地盤補正モデル V4対応 & 震央推定機能 & 総合情報]</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -11,7 +11,34 @@
 <style>
 body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;color:#fff}
 
-/* --- 2Dマップ専用ウィンドウ (中央・旧3Dマップ位置) --- */
+/* --- サイドバーコンテナ (レイアウト重なり・バランス崩れ修正用) --- */
+#leftSidebar {
+    position: fixed; top: 10px; left: 10px; bottom: 60px; width: 420px;
+    display: flex; flex-direction: column; gap: 10px;
+    z-index: 100; overflow-y: auto; overflow-x: hidden; pointer-events: none;
+}
+#rightSidebar {
+    position: fixed; top: 10px; right: 10px; bottom: 100px; width: 380px;
+    display: flex; flex-direction: column; gap: 10px;
+    z-index: 100; overflow-y: auto; overflow-x: hidden; pointer-events: none;
+}
+#leftSidebar::-webkit-scrollbar, #rightSidebar::-webkit-scrollbar { display: none; }
+#leftSidebar > div, #rightSidebar > div {
+    position: relative !important; top: auto !important; left: auto !important; right: auto !important; bottom: auto !important;
+    pointer-events: auto; flex-shrink: 0; width: 100% !important; margin: 0 !important; transform: none !important;
+}
+
+/* --- 各パネル共通ベースデザイン --- */
+.base-panel {
+    background: rgba(20, 20, 20, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.8);
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+/* --- 2Dマップ専用ウィンドウ --- */
 #leafletWrap {
     position: fixed;
     top: 10px;
@@ -53,20 +80,11 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
     transition: all 0.2s ease-in-out;
     outline: none;
 }
-.modeBtn:not(:last-child) {
-    border-right: 1px solid rgba(255, 255, 255, 0.2);
-}
-.modeBtn.active {
-    color: #fff;
-    background: rgba(0, 85, 255, 0.6);
-    box-shadow: inset 0 0 10px rgba(0, 85, 255, 0.5);
-}
-.modeBtn:hover:not(.active) {
-    background: rgba(255, 255, 255, 0.1);
-    color: #ddd;
-}
+.modeBtn:not(:last-child) { border-right: 1px solid rgba(255, 255, 255, 0.2); }
+.modeBtn.active { color: #fff; background: rgba(0, 85, 255, 0.6); box-shadow: inset 0 0 10px rgba(0, 85, 255, 0.5); }
+.modeBtn:hover:not(.active) { background: rgba(255, 255, 255, 0.1); color: #ddd; }
 
-/* --- 震度カラー凡例 (マップ下部中央) --- */
+/* --- 震度カラー凡例 --- */
 #shindoLegend {
     position: absolute;
     bottom: 10px;
@@ -82,31 +100,12 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8);
     pointer-events: none;
 }
-.legendItem {
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    font-weight: 900;
-    border-radius: 4px;
-}
+.legendItem { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 900; border-radius: 4px; }
 
-/* --- サイドパネル共通 --- */
-.side-panel {
- position:fixed; left:10px; width:410px;
- background:rgba(15,15,15,.9); border:1px solid rgba(255,255,255,.3);
- border-radius:0; overflow:hidden; z-index:100;
- backdrop-filter:blur(10px); box-shadow: 0 4px 20px rgba(0,0,0,0.8);
-}
-
-/* --- 最新情報パネル (左上) --- */
+/* --- 最新情報パネル --- */
 #latestPanel{
- position:fixed;top:10px;left:10px;width:420px;
- background:rgba(20,20,20,0.95); border:2px solid rgba(255,255,255,0.4);
- border-radius:0;padding:12px; backdrop-filter:blur(10px); z-index:101;
- box-sizing: border-box;
+    border: 2px solid rgba(255,255,255,0.4); padding: 12px;
+    background: rgba(20,20,20,0.95); backdrop-filter: blur(10px); box-sizing: border-box;
 }
 .latestWrap{display:flex; align-items: center; gap:15px;}
 .latestLeft{flex:1;color:#fff;overflow:hidden;}
@@ -118,26 +117,17 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
     font-size:58px;font-weight:900;flex-shrink:0;
     overflow: hidden; white-space: nowrap; line-height: 1;
 }
+.tag-checking { background: #ff8c00; color: #fff; padding: 2px 10px; font-weight: 900; font-size: 14px; margin-left: 8px; border: 1px solid #fff; }
 
-.tag-checking {
-    background: #ff8c00;
-    color: #fff;
-    padding: 2px 10px;
-    font-weight: 900;
-    font-size: 14px;
-    margin-left: 8px;
-    border: 1px solid #fff;
-}
-
-/* --- 震度詳細 (左側) --- */
-#detailPanel{ top:150px; height:200px; }
+/* --- 震度詳細 --- */
+#detailPanel{ height: 200px; }
 #detailScrollArea{ width:100%; height:100%; overflow-y:auto; transition: opacity 0.8s ease-in-out; opacity: 1; }
 #detailScrollArea::-webkit-scrollbar { display: none; }
 .detailItem{display:flex; align-items:center; padding:8px 12px; border-bottom:1px solid rgba(255,255,255,0.15);}
 .detailScaleBox{width:36px; height:36px; border-radius:0; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:900; margin-right:12px; flex-shrink:0;}
 
-/* --- 津波パネル (左下) --- */
-#tsunamiPanel{ top:360px; height:180px; border-left: 8px solid #0055ff; }
+/* --- 津波パネル --- */
+#tsunamiPanel{ height: 180px; }
 #tsunamiScrollArea{width:100%; height:100%; overflow-y:auto; transition: opacity 0.8s ease-in-out; opacity: 1;}
 #tsunamiScrollArea::-webkit-scrollbar { display: none; }
 .tsunamiItem { display:flex; padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.2); align-items:center; }
@@ -146,10 +136,7 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 .noTsunami{height:100%; display:flex; align-items:center; justify-content:center; color:#aaa; font-weight:bold; font-size:18px; text-align:center; padding:0 10px;}
 
 /* --- EEW関連 --- */
-#eewContainer { 
-    position: fixed; top: 550px; left: 10px; width: 410px; z-index: 200; 
-    display: flex; flex-direction: column; gap: 8px; pointer-events: none; 
-}
+#eewContainer { display: flex; flex-direction: column; gap: 8px; }
 #eewPopup {
  position:fixed; top:55px; left:440px; 
  background: #ff0000; color:#fff; border:4px double #fff;
@@ -172,8 +159,8 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 .eewSubInfo { font-size: 18px; font-weight: bold; display: flex; gap: 15px; }
 .eewAreas { font-size: 13px; color: #ffa500; margin-top: 8px; font-weight: bold; background: rgba(255,165,0,0.1); padding: 6px; border: 1px solid rgba(255,165,0,0.3); }
 
-/* --- 地震情報ウィンドウ (右側) --- */
-#quakePanel{position:fixed;top:10px;right:10px;width:380px;z-index:100; box-sizing: border-box;}
+/* --- 地震情報ウィンドウ --- */
+#quakePanel{ display: flex; flex-direction: column; }
 .qItem{display:flex;margin-bottom:8px;background:rgba(25,25,25,0.95); border:1px solid rgba(255,255,255,.3);border-radius:0;overflow:hidden;backdrop-filter:blur(5px); cursor:pointer; transition: all 0.2s;}
 .qItem:hover { background:rgba(50,50,50,0.95); }
 .qItem.selected { border: 2px solid #00ffcc; box-shadow: 0 0 10px rgba(0,255,204,0.5); transform: scale(1.02); margin-left: -5px; }
@@ -181,233 +168,171 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 .qInfo{flex:1;padding:10px 14px;color:#fff}
 .qName{font-size:20px; font-weight:900; margin-bottom:6px;}
 
-/* --- 自由付随コメントパネル (右側履歴の下) --- */
-#commentPanel {
-    position: fixed;
-    top: 720px; 
-    right: 10px;
-    width: 380px;
-    height: 130px;
-    background: rgba(20, 20, 20, 0.95);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-top: 4px solid #00ffcc;
-    z-index: 100;
-    backdrop-filter: blur(10px);
-    box-sizing: border-box;
-}
-.commentHeader {
-    background: rgba(255,255,255,0.1);
-    padding: 4px 10px;
-    font-size: 12px;
-    font-weight: bold;
-    color: #00ffcc;
-    border-bottom: 1px solid rgba(255,255,255,0.2);
-}
-#commentScrollArea {
-    width: 100%;
-    height: calc(100% - 25px);
-    overflow-y: auto;
-    transition: opacity 0.8s ease-in-out;
-}
+/* --- 自由付随コメントパネル --- */
+#commentPanel { height: 130px; }
+.commentHeader { background: rgba(255,255,255,0.1); padding: 4px 10px; font-size: 12px; font-weight: bold; color: #00ffcc; border-bottom: 1px solid rgba(255,255,255,0.2); }
+#commentScrollArea { width: 100%; height: calc(100% - 25px); overflow-y: auto; transition: opacity 0.8s ease-in-out; }
 #commentScrollArea::-webkit-scrollbar { display: none; }
-.commentBody {
-    padding: 10px;
-    font-size: 14px;
-    line-height: 1.6;
-    font-weight: bold;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-}
-.noComment {
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #666;
-    font-size: 14px;
-}
+.commentBody { padding: 10px; font-size: 14px; line-height: 1.6; font-weight: bold; white-space: pre-wrap; word-wrap: break-word; }
+.noComment { height: 100%; display: flex; align-items: center; justify-content: center; color: #666; font-size: 14px; }
 
-/* --- 予測長周期地震動階級パネル (右側コメントの下) --- */
-#lpgmPanel {
-    position: fixed;
-    top: 860px; 
-    right: 10px;
-    width: 380px;
-    height: 100px;
-    background: rgba(20, 20, 20, 0.95);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-top: 4px solid #ff4500;
-    z-index: 100;
-    backdrop-filter: blur(10px);
-    box-sizing: border-box;
-}
-.lpgmHeader {
-    background: rgba(255,255,255,0.1);
-    padding: 4px 10px;
-    font-size: 12px;
-    font-weight: bold;
-    color: #ff4500;
-    border-bottom: 1px solid rgba(255,255,255,0.2);
-}
-#lpgmBody {
-    display: flex;
-    align-items: center;
-    justify-content: space-around;
-    height: calc(100% - 25px);
-    padding: 0 10px;
-}
-.lpgmClass {
-    width: 45px;
-    height: 45px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
-    font-weight: 900;
-    border-radius: 50%;
-    background: #333;
-    color: #888;
-    border: 2px solid #555;
-    transition: all 0.3s;
-}
+/* --- 予測長周期地震動階級パネル --- */
+#lpgmPanel { height: 100px; }
+.lpgmHeader { background: rgba(255,255,255,0.1); padding: 4px 10px; font-size: 12px; font-weight: bold; color: #ff4500; border-bottom: 1px solid rgba(255,255,255,0.2); }
+#lpgmBody { display: flex; align-items: center; justify-content: space-around; height: calc(100% - 25px); padding: 0 10px; }
+.lpgmClass { width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 900; border-radius: 50%; background: #333; color: #888; border: 2px solid #555; transition: all 0.3s; }
 .lpgmClass.active-1 { background: rgba(0,206,209,0.2); color: #00ced1; border-color: #00ced1; box-shadow: 0 0 10px rgba(0,206,209,0.5); }
 .lpgmClass.active-2 { background: rgba(255,255,0,0.2); color: #ffff00; border-color: #ffff00; box-shadow: 0 0 10px rgba(255,255,0,0.5); }
 .lpgmClass.active-3 { background: rgba(255,170,0,0.2); color: #ffaa00; border-color: #ffaa00; box-shadow: 0 0 10px rgba(255,170,0,0.5); }
 .lpgmClass.active-4 { background: rgba(255,0,0,0.2); color: #ff0000; border-color: #ff0000; box-shadow: 0 0 10px rgba(255,0,0,0.5); }
 
+/* --- AXIS API 情報ウィンドウ --- */
+#weatherPanel { height: 120px; display: none; }
+#volcanoPanel { height: 120px; display: none; }
 
-.tag { 
-    display: inline-block;
-    padding: 2px 8px; 
-    border-radius: 0; 
-    font-size: 15px; 
-    font-weight: 900; 
-    margin-right: 6px;
-    min-width: 60px;
-    text-align: center;
+#newsPanel {
+    position: fixed;
+    bottom: 90px; left: 50%; transform: translateX(-50%);
+    width: 600px; height: 100px;
+    z-index: 1000;
+    display: none;
 }
+
+.axisHeader { background: rgba(255,255,255,0.1); padding: 4px 10px; font-size: 12px; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.2); }
+#weatherPanel .axisHeader { color: #1e90ff; }
+#volcanoPanel .axisHeader { color: #ff8c00; }
+#newsPanel .axisHeader { color: #ffff00; }
+
+.axisScrollArea { width: 100%; height: calc(100% - 25px); overflow-y: auto; transition: opacity 0.8s ease-in-out; }
+.axisScrollArea::-webkit-scrollbar { display: none; }
+.info-title { font-size: 14px; font-weight: 900; color: #fff; margin-bottom: 4px; }
+.info-title small { font-weight: normal; color: #aaa; margin-left: 8px; }
+.info-text { font-size: 13px; line-height: 1.5; color: #ddd; white-space: pre-wrap; word-wrap: break-word; }
+
+.tag { display: inline-block; padding: 2px 8px; border-radius: 0; font-size: 15px; font-weight: 900; margin-right: 6px; min-width: 60px; text-align: center; }
 
 /* --- 時計パネル (左下下部) --- */
 #clockPanel {
-    position: fixed;
-    bottom: 10px;
-    left: 10px;
-    width: 410px;
-    background: rgba(20, 20, 20, 0.9);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    color: #fff;
-    font-size: 22px;
-    font-weight: 900;
-    text-align: center;
-    padding: 10px 0;
-    z-index: 100;
-    backdrop-filter: blur(10px);
-    letter-spacing: 2px;
-    box-sizing: border-box;
+    position: fixed; bottom: 10px; left: 10px; width: 410px;
+    background: rgba(20, 20, 20, 0.9); border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #fff; font-size: 22px; font-weight: 900; text-align: center; padding: 10px 0;
+    z-index: 100; backdrop-filter: blur(10px); letter-spacing: 2px; box-sizing: border-box;
 }
 
 /* --- システムログ (右下) --- */
 #wsLogPanel {
- position:fixed; bottom:10px; right:10px; width:340px; height:80px;
- background:rgba(0,0,0,0.8); border:1px solid rgba(0,255,0,0.3);
- border-radius:0; color:#0f0; font-family:monospace; font-size:11px;
- padding:8px; overflow-y:auto; z-index:150; opacity: 0.8;
- box-sizing: border-box;
+    position: fixed; bottom: 10px; right: 10px; width: 340px; height: 80px;
+    background: rgba(0,0,0,0.8); border: 1px solid rgba(0,255,0,0.3);
+    color: #0f0; font-family: monospace; font-size: 11px; padding: 8px;
+    overflow-y: auto; z-index: 150; opacity: 0.8; box-sizing: border-box;
 }
 
 /* --- 設定ウィンドウ --- */
 #settingsModal {
-    position: fixed;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(20, 20, 20, 0.95);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 0 30px rgba(0,0,0,1);
-    z-index: 10000;
-    width: 360px;
-    max-height: 80vh;
-    overflow-y: auto;
-    border-radius: 8px;
-    padding: 20px;
-    color: #fff;
-    display: none;
-    backdrop-filter: blur(10px);
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: rgba(20, 20, 20, 0.95); border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 0 30px rgba(0,0,0,1); z-index: 10000; width: 360px; max-height: 80vh;
+    overflow-y: auto; border-radius: 8px; padding: 20px; color: #fff; display: none; backdrop-filter: blur(10px);
 }
 #settingsModal::-webkit-scrollbar { width: 8px; }
 #settingsModal::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
-.settingsHeader {
-    font-size: 18px; font-weight: bold;
-    border-bottom: 1px solid #555; padding-bottom: 10px; margin-bottom: 15px;
-    display: flex; justify-content: space-between; align-items: center;
-}
-.settingsHeader button { background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; line-height: 1;}
-.setting-group { margin-bottom: 20px; border-bottom: 1px dashed rgba(255,255,255,0.2); padding-bottom: 10px;}
+.settingsHeader { font-size: 18px; font-weight: bold; border-bottom: 1px solid #555; padding-bottom: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+.settingsHeader button { background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; line-height: 1; }
+.setting-group { margin-bottom: 20px; border-bottom: 1px dashed rgba(255,255,255,0.2); padding-bottom: 10px; }
 .setting-group-title { font-size: 14px; color: #aaa; margin-bottom: 10px; font-weight: bold; }
 .setting-item { margin-bottom: 15px; display:flex; flex-direction: column; gap: 8px; }
-.setting-item label { font-size: 13px; font-weight: bold; color: #ccc; display: flex; justify-content: space-between;}
+.setting-item label { font-size: 13px; font-weight: bold; color: #ccc; display: flex; justify-content: space-between; }
 .setting-item input[type=range] { width: 100%; cursor: pointer; }
 .setting-value { font-size: 13px; color: #00ffcc; }
 
 @keyframes blink{from{opacity:0.5}to{opacity:1}}
 
-/* ================= レスポンシブ対応 ================= */
-@media screen and (max-width: 1100px) {
-    body {
-        overflow-y: auto;
-        overflow-x: hidden;
-        display: flex;
-        flex-direction: column;
-        padding-bottom: 20px;
+/* ================= レスポンシブ対応 (重複・配置崩れ対策) ================= */
+@media screen and (max-width: 1250px) {
+    body { 
+        overflow-y: auto; overflow-x: hidden; 
+        display: flex; flex-direction: column; 
+        padding-bottom: 20px; background: #050505; 
     }
     
-    #leafletWrap {
-        position: relative !important;
-        top: 0 !important; left: 0 !important; right: 0 !important; bottom: auto !important;
-        width: 100% !important;
-        height: 45vh !important;
-        z-index: 5;
-        border: none;
-        box-shadow: none;
-        order: 1;
-        margin: 0 !important;
+    #eewPopup { 
+        position: fixed !important; top: 10px !important; left: 50% !important; 
+        transform: translateX(-50%) !important; font-size: 18px !important; z-index: 9999; 
+    }
+    
+    #leafletWrap { 
+        position: relative !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: auto !important; 
+        width: 100% !important; height: 45vh !important; min-height: 300px; 
+        z-index: 5; border: none; box-shadow: none; order: 1; margin: 0 !important; flex-shrink: 0; 
     }
 
-    #eewContainer {
-        position: relative !important;
-        top: auto !important; 
-        left: auto !important; 
-        width: 96% !important; 
-        margin: 8px auto !important;
-        z-index: 9999;
-        order: 5;
+    #leftSidebar, #rightSidebar { 
+        position: relative !important; width: 96% !important; margin: 0 auto !important; 
+        top: auto !important; left: auto !important; right: auto !important; bottom: auto !important; 
+        overflow: visible !important; gap: 8px; flex-shrink: 0; 
     }
+    #leftSidebar { order: 2; margin-top: 8px !important; }
+    #rightSidebar { order: 3; margin-top: 8px !important; }
     
-    #eewPopup { top: 10px !important; left: 50% !important; transform: translateX(-50%) !important; font-size: 18px !important; }
-
-    .side-panel, #latestPanel, #quakePanel, #commentPanel, #lpgmPanel, #wsLogPanel, #clockPanel {
-        position: relative !important;
-        top: auto !important; left: auto !important; right: auto !important; bottom: auto !important;
-        width: 96% !important;
-        margin: 8px auto !important;
-        z-index: 10;
-        border-radius: 4px;
+    #newsPanel { 
+        position: relative !important; top: auto !important; left: auto !important; bottom: auto !important; 
+        transform: none !important; width: 96% !important; margin: 8px auto !important; 
+        order: 4; flex-shrink: 0; 
     }
-    
-    #latestPanel { order: 2; }
-    #detailPanel { order: 3; min-height: 200px; }
-    #tsunamiPanel { order: 4; min-height: 180px; }
-    #quakePanel { order: 6; }
-    #commentPanel { order: 7; min-height: 130px; }
-    #lpgmPanel { order: 8; min-height: 100px; }
-    #wsLogPanel { order: 9; height: 120px; max-height: none; margin-bottom: 30px !important; }
-    #clockPanel { order: 10; }
+    #wsLogPanel { 
+        position: relative !important; top: auto !important; left: auto !important; right: auto !important; bottom: auto !important; 
+        width: 96% !important; margin: 8px auto 30px auto !important; 
+        order: 5; height: 120px; max-height: none; flex-shrink: 0; 
+    }
+    #clockPanel { 
+        position: relative !important; top: auto !important; left: auto !important; bottom: auto !important; 
+        width: 96% !important; margin: 8px auto !important; 
+        order: 6; flex-shrink: 0; 
+    }
 }
 </style>
 </head>
 
 <body>
 
-<div id="latestPanel"></div>
+<div id="leftSidebar">
+    <div id="latestPanel"></div>
+    <div id="detailPanel" class="base-panel"><div id="detailScrollArea"></div></div>
+    <div id="tsunamiPanel" class="base-panel" style="border-left: 8px solid #0055ff;">
+        <div id="tsunamiScrollArea">
+            <div class="noTsunami">国内での津波の心配はありません。<br>海外での津波の影響は不明です。</div>
+        </div>
+    </div>
+    <div id="eewContainer"></div>
+</div>
+
+<div id="rightSidebar">
+    <div id="quakePanel"></div>
+    <div id="commentPanel" class="base-panel" style="border-top: 4px solid #00ffcc;">
+        <div class="commentHeader">自由付随コメント (FREE FORM COMMENT)</div>
+        <div id="commentScrollArea">
+            <div class="noComment">付随コメントなし。</div>
+        </div>
+    </div>
+    <div id="lpgmPanel" class="base-panel" style="border-top: 4px solid #ff4500;">
+        <div class="lpgmHeader">予測長周期地震動階級 (ESTIMATED LPGM CLASS)</div>
+        <div id="lpgmBody">
+            <div class="lpgmClass">1</div>
+            <div class="lpgmClass">2</div>
+            <div class="lpgmClass">3</div>
+            <div class="lpgmClass">4</div>
+        </div>
+    </div>
+    <div id="weatherPanel" class="base-panel" style="border-top: 4px solid #1e90ff;">
+        <div class="axisHeader">気象情報 (METEOROLOGY)</div>
+        <div id="weatherScrollArea" class="axisScrollArea"><div class="info-text" style="color:#666;text-align:center;padding-top:20px;">情報を受信待機中...</div></div>
+    </div>
+    <div id="volcanoPanel" class="base-panel" style="border-top: 4px solid #ff8c00;">
+        <div class="axisHeader">火山情報 (VOLCANOLOGY)</div>
+        <div id="volcanoScrollArea" class="axisScrollArea"><div class="info-text" style="color:#666;text-align:center;padding-top:20px;">情報を受信待機中...</div></div>
+    </div>
+</div>
+
 <div id="eewPopup"></div>
 <div id="leafletWrap">
     <div id="leafletMap"></div>
@@ -428,26 +353,10 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
         <div class="legendItem" style="background:#550055;color:#fff;">7</div>
     </div>
 </div>
-<div id="detailPanel" class="side-panel"><div id="detailScrollArea"></div></div>
-<div id="tsunamiPanel" class="side-panel"><div id="tsunamiScrollArea"><div class="noTsunami">国内での津波の心配はありません。<br>海外での津波の影響は不明です。</div></div></div>
-<div id="eewContainer"></div>
-<div id="quakePanel"></div>
 
-<div id="commentPanel">
-    <div class="commentHeader">自由付随コメント (FREE FORM COMMENT)</div>
-    <div id="commentScrollArea">
-        <div class="noComment">付随コメントなし。</div>
-    </div>
-</div>
-
-<div id="lpgmPanel">
-    <div class="lpgmHeader">予測長周期地震動階級 (ESTIMATED LPGM CLASS)</div>
-    <div id="lpgmBody">
-        <div class="lpgmClass">1</div>
-        <div class="lpgmClass">2</div>
-        <div class="lpgmClass">3</div>
-        <div class="lpgmClass">4</div>
-    </div>
+<div id="newsPanel" class="base-panel" style="border-top: 4px solid #ffff00;">
+    <div class="axisHeader">ニュース速報 (BREAKING NEWS)</div>
+    <div id="newsScrollArea" class="axisScrollArea"><div class="info-text" style="color:#666;text-align:center;padding-top:20px;">情報を受信待機中...</div></div>
 </div>
 
 <div id="clockPanel">--/--/-- --:--:--</div>
@@ -457,6 +366,15 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 <div id="settingsModal">
     <div class="settingsHeader">各種設定 <button id="btnCloseSettings">×</button></div>
     <div class="settingsBody">
+        <div class="setting-group">
+            <div class="setting-group-title">AXIS API 連携設定 (Subscriber)</div>
+            <div class="setting-item">
+                <label>アクセストークン</label>
+                <input type="password" id="axisTokenInput" placeholder="eyJhb..." style="background:#222; color:#fff; border:1px solid #555; padding:5px;">
+            </div>
+            <button id="btnAxisConnect" style="margin-top:10px; width:100%; background:#0055ff; color:#fff; border:none; padding:8px; cursor:pointer; font-weight:bold; border-radius:4px;">接続 / 更新</button>
+        </div>
+
         <div class="setting-group">
             <div class="setting-group-title">基本システム音設定</div>
             <div class="setting-item">
@@ -1117,7 +1035,10 @@ function updateLeafletMap(earthquake, points, skipFlyTo = false) {
         bounds = L.latLngBounds([lat, lng], [lat, lng]);
         if (latestQuakeMarker) latestQuakeMarker.setLatLng([lat, lng]);
         else latestQuakeMarker = L.marker([lat, lng], { icon: L.divIcon({className:'epicenter-icon', html:'×', iconSize:[50,50], iconAnchor:[25,25]}) }).addTo(lMap);
-        latestQuakeMarker.setOpacity((isRealtimeOnlyMode && !selectedHistoryQuake) ? 0 : 1);
+        
+        // EEW受信時はAPIのマーカーを非表示にする制御
+        let shouldHide = (isRealtimeOnlyMode && !selectedHistoryQuake) || isEEWActive;
+        latestQuakeMarker.setOpacity(shouldHide ? 0 : 1);
     }
     if (geojsonLayer && points) {
         const prefMax = {}; points.forEach(p => { if(!prefMax[p.pref] || p.scale > prefMax[p.pref]) prefMax[p.pref] = p.scale; });
@@ -1161,6 +1082,12 @@ function clearEEWDisplay(eventId = null) {
             const popup = document.getElementById("eewPopup"); if(popup) popup.style.display = "none";
             if(geojsonLayer) geojsonLayer.setStyle({ color: MAP_BORDER_COLOR, weight: MAP_BORDER_WEIGHT, fillColor: "transparent", fillOpacity: 0.5 });
             if(window.lastKyoshinData) renderKyoshinCanvas(window.lastKyoshinData);
+            
+            // APIマーカーの再表示
+            if (latestQuakeMarker) {
+                let shouldHide = (isRealtimeOnlyMode && !selectedHistoryQuake);
+                latestQuakeMarker.setOpacity(shouldHide ? 0 : 1);
+            }
         } else {
             let hasWarn = Array.from(activeEEWs.values()).some(e => e.isWarn);
             const popup = document.getElementById("eewPopup");
@@ -1177,6 +1104,12 @@ function clearEEWDisplay(eventId = null) {
         epicenterMarkers.forEach(m => lMap.removeLayer(m)); epicenterMarkers.clear();
         if(geojsonLayer) geojsonLayer.setStyle({ color: MAP_BORDER_COLOR, weight: MAP_BORDER_WEIGHT, fillColor: "transparent", fillOpacity: 0.5 });
         if(window.lastKyoshinData) renderKyoshinCanvas(window.lastKyoshinData);
+        
+        // APIマーカーの再表示
+        if (latestQuakeMarker) {
+            let shouldHide = (isRealtimeOnlyMode && !selectedHistoryQuake);
+            latestQuakeMarker.setOpacity(shouldHide ? 0 : 1);
+        }
     }
 }
 
@@ -1206,6 +1139,9 @@ async function updateWolfxEEW(data) {
     if (data.MaxIntensity === "7") { seWarning.currentTime = 0; seWarning.play().catch(e=>{}); }
 
     isEEWActive = true; 
+    // EEW受信時はAPIのマーカーを確実に非表示にする
+    if (latestQuakeMarker) latestQuakeMarker.setOpacity(0);
+    
     if(isYureDetecting) clearYureDetection(); 
 
     activeEEWs.set(id, data); const offset = await calculateEewOffset(data); eewOffsets.set(id, offset); updateLPGMDisplay(data.Magunitude, data.Depth);
@@ -1829,27 +1765,175 @@ async function loadQuakes(){
     } catch(e){ console.error(e); }
 }
 
-/* ================= 通信管理 ================= */
+/* ================= 通信・API管理 ================= */
 function addLog(msg) {
     const logPanel = document.getElementById("wsLogPanel"); if(!logPanel) return;
     const line = document.createElement("div"); line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`; logPanel.prepend(line);
 }
-function connectWS() {
+
+// --- Wolfx WebSocket (メインEEW用) ---
+let isWolfxConnected = false;
+function connectWolfx() {
+    const wolfx = new WebSocket("wss://ws-api.wolfx.jp/jma_eew");
+    wolfx.onmessage = e => { if(isDebugNankai) return; const d = JSON.parse(e.data); if(d.type==="jma_eew") updateWolfxEEW(d); };
+    wolfx.onopen = () => { addLog("📡 Wolfx EEW Connected"); isWolfxConnected = true; };
+    wolfx.onclose = () => { addLog("📡 Wolfx EEW Disconnected"); isWolfxConnected = false; setTimeout(connectWolfx, 5000); };
+    wolfx.onerror = () => { isWolfxConnected = false; };
+}
+
+// --- P2Pquake WebSocket (地震履歴用) ---
+function connectP2P() {
     const p2p = new WebSocket("wss://api.p2pquake.net/v2/ws");
     p2p.onmessage = e => { 
         if(isDebugNankai) return; 
         const d = JSON.parse(e.data); 
         if(d.code===551||d.code===552) { addLog(`P2P WS 受信: Code ${d.code}`); if(d.code===551) clearEEWDisplay(); loadQuakes(); } 
     };
-    p2p.onopen = () => addLog("📡 P2Pquake Connected"); p2p.onclose = () => setTimeout(connectWS, 5000);
-    const wolfx = new WebSocket("wss://ws-api.wolfx.jp/jma_eew");
-    wolfx.onmessage = e => { if(isDebugNankai) return; const d = JSON.parse(e.data); if(d.type==="jma_eew") updateWolfxEEW(d); };
-    wolfx.onopen = () => addLog("📡 Wolfx EEW Connected");
+    p2p.onopen = () => addLog("📡 P2Pquake Connected"); 
+    p2p.onclose = () => { setTimeout(connectP2P, 5000); };
 }
+
+// --- AXIS API WebSocket ---
+let axisToken = localStorage.getItem('axisToken') || "";
+let axisWs = null;
+let axisRetrySec = 1000;
+let axisRetryCount = 0;
+const axisRetryMax = 10;
+let axisHeartbeatTimer = null;
+
+document.getElementById('axisTokenInput').value = axisToken;
+document.getElementById('btnAxisConnect').addEventListener('click', () => {
+    axisToken = document.getElementById('axisTokenInput').value;
+    localStorage.setItem('axisToken', axisToken);
+    connectAxis();
+});
+
+function connectAxis() {
+    if (axisWs) { axisWs.onclose = null; axisWs.close(); }
+    if (!axisToken) return;
+    
+    axisWs = new WebSocket(`wss://ws.axis.prioris.jp/socket?token=${axisToken}`);
+    
+    axisWs.onopen = () => {
+        addLog("📡 AXIS API Connected (Waiting for auth...)");
+        axisWs.send("hello");
+    };
+    
+    axisWs.onmessage = (e) => {
+        const data = e.data;
+        if (typeof data === 'string') {
+            if (data === 'hello') {
+                addLog("📡 AXIS API Authenticated");
+                axisRetrySec = 1000; axisRetryCount = 0;
+                document.getElementById('weatherPanel').style.display = 'block';
+                document.getElementById('volcanoPanel').style.display = 'block';
+                document.getElementById('newsPanel').style.display = 'block';
+                
+                if(axisHeartbeatTimer) clearInterval(axisHeartbeatTimer);
+                axisHeartbeatTimer = setInterval(() => { if (axisWs && axisWs.readyState === WebSocket.OPEN) axisWs.send("hb"); }, 30000);
+                return;
+            } else if (data === 'hb') { return; } 
+            else if (data.startsWith('error:')) { addLog(`📡 AXIS API Error: ${data}`); return; }
+        }
+        
+        try { handleAxisMessage(JSON.parse(data)); } catch (err) { console.error("AXIS parse error", err); }
+    };
+    
+    axisWs.onclose = () => {
+        addLog("📡 AXIS API Disconnected");
+        document.getElementById('weatherPanel').style.display = 'none';
+        document.getElementById('volcanoPanel').style.display = 'none';
+        document.getElementById('newsPanel').style.display = 'none';
+        if(axisHeartbeatTimer) clearInterval(axisHeartbeatTimer);
+        
+        axisRetrySec = axisRetrySec * 2;
+        if (axisRetryCount < axisRetryMax) {
+            axisRetryCount++;
+            setTimeout(connectAxis, axisRetrySec);
+        }
+    };
+}
+
+function handleAxisMessage(data) {
+    const channel = data.channel; const msg = data.message;
+    
+    if (channel === 'jmx-meteorology') {
+        const title = msg?.Head?.Title || "気象情報";
+        const time = msg?.Head?.ReportDateTime ? msg.Head.ReportDateTime.slice(0,16).replace("T", " ") : "";
+        let text = msg?.Head?.Headline?.Text || "";
+        if(!text && msg?.Body?.Comment?.Text) text = msg.Body.Comment.Text[0]?.valueOf_ || "";
+        updatePanelScroll("weatherScrollArea", `<div class="info-title">${title} <small>${time}</small></div><div class="info-text">${text}</div>`);
+    } 
+    else if (channel === 'jmx-volcanology') {
+        const title = msg?.Head?.Title || "火山情報";
+        const time = msg?.Head?.ReportDateTime ? msg.Head.ReportDateTime.slice(0,16).replace("T", " ") : "";
+        let text = msg?.Head?.Headline?.Text || "";
+        updatePanelScroll("volcanoScrollArea", `<div class="info-title">${title} <small>${time}</small></div><div class="info-text">${text}</div>`);
+    }
+    else if (channel === 'breaking-news') {
+        const title = msg?.Title || "ニュース速報";
+        const time = msg?.ReportDateTime ? msg.ReportDateTime.slice(0,16).replace("T", " ") : "";
+        const text = (msg?.Text || []).join("<br>");
+        updatePanelScroll("newsScrollArea", `<div class="info-title">${title} <small>${time}</small></div><div class="info-text">${text}</div>`);
+    }
+    else if (channel === 'eew') {
+        if (!isWolfxConnected) {
+            const wolfxFormat = convertAxisEewToWolfx(msg);
+            if (wolfxFormat) updateWolfxEEW(wolfxFormat);
+        }
+    }
+}
+
+function updatePanelScroll(areaId, html) {
+    const area = document.getElementById(areaId); if (!area) return;
+    area.innerHTML = `<div style="padding:10px;">${html}</div>`;
+    area.scrollTop = 0; startAutoScroll(areaId);
+}
+
+function convertAxisEewToWolfx(msg) {
+    if (!msg || !msg.Title) return null;
+    let lat = 0, lng = 0;
+    if (msg.Hypocenter && msg.Hypocenter.Coordinate) { lng = msg.Hypocenter.Coordinate[0]; lat = msg.Hypocenter.Coordinate[1]; }
+    
+    let depthStr = msg.Hypocenter?.Depth || "10km";
+    let depthNum = parseInt(depthStr.replace(/\D/g, '')) || 10;
+    if (depthStr.includes("ごく浅い")) depthNum = 0;
+
+    let chiiki = "";
+    if (msg.Forecast) chiiki = msg.Forecast.map(f => f.Name).join("、");
+
+    return {
+        "type": "jma_eew",
+        "EventID": msg.EventID || "AXIS" + Date.now(),
+        "Title": msg.Title,
+        "Serial": String(msg.Serial || 1),
+        "isFinal": msg.Flag?.is_final || false,
+        "isCancel": msg.Flag?.is_cancel || false,
+        "isWarn": msg.Title.includes("警報"),
+        "isTraining": msg.Flag?.is_training || false,
+        "isAssumption": false,
+        "isSea": false,
+        "AnnouncedTime": (msg.ReportDateTime || "").replace("T", " ").substring(0, 19),
+        "OriginTime": (msg.OriginDateTime || "").replace("T", " ").substring(0, 19),
+        "Hypocenter": msg.Hypocenter?.Name || "不明",
+        "Latitude": lat,
+        "Longitude": lng,
+        "Magunitude": msg.Magnitude || "1.0",
+        "Depth": String(depthNum),
+        "MaxIntensity": (msg.Intensity || "0").replace("-", "弱").replace("+", "強"),
+        "WarnArea": { "Chiiki": chiiki },
+        "OriginalText": msg.Text || ""
+    };
+}
+
+
 (async()=>{
     await loadSites(); await initLeaflet();
     setInterval(async()=>{ const d=await fetchKyoshin(); if(d) drawKyoshin(d); }, 1000);
-    loadQuakes(); connectWS();
+    loadQuakes(); 
+    connectP2P();
+    connectWolfx();
+    connectAxis();
 })();
 </script>
 </body>
