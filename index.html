@@ -349,15 +349,15 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
         <button id="btnSettings" class="modeBtn">⚙ 設定</button>
     </div>
     <div id="shindoLegend">
-        <div class="legendItem" style="background:#40e0d0;color:#000;">1</div>
-        <div class="legendItem" style="background:#00aa00;color:#fff;">2</div>
-        <div class="legendItem" style="background:#ffff00;color:#000;">3</div>
-        <div class="legendItem" style="background:#ffaa00;color:#000;">4</div>
-        <div class="legendItem" style="background:#ff5500;color:#fff;">5弱</div>
-        <div class="legendItem" style="background:#ff0000;color:#fff;">5強</div>
-        <div class="legendItem" style="background:#aa0000;color:#fff;">6弱</div>
-        <div class="legendItem" style="background:#aa00aa;color:#fff;">6強</div>
-        <div class="legendItem" style="background:#550055;color:#fff;">7</div>
+        <div class="legendItem" style="background:#f2f2ff;color:#000;">1</div>
+        <div class="legendItem" style="background:#0000ff;color:#fff;">2</div>
+        <div class="legendItem" style="background:#00c800;color:#fff;">3</div>
+        <div class="legendItem" style="background:#fae600;color:#000;">4</div>
+        <div class="legendItem" style="background:#ff9900;color:#000;">5弱</div>
+        <div class="legendItem" style="background:#ff2800;color:#fff;">5強</div>
+        <div class="legendItem" style="background:#fa0000;color:#fff;">6弱</div>
+        <div class="legendItem" style="background:#a00000;color:#fff;">6強</div>
+        <div class="legendItem" style="background:#960096;color:#fff;">7</div>
     </div>
 </div>
 
@@ -670,7 +670,10 @@ async function generateDailySummary(todayStr, now) {
         if(panel) panel.style.display = "block";
         updatePanelScroll("summaryScrollArea", `<div style="padding:10px;"><div class="info-title">本日(${todayStr.replace(/-/g, "/")})の地震まとめ</div><div class="info-text">${textHtml}</div></div>`);
 
-        speakText(speechText);
+        playPippiBeep();
+        setTimeout(() => {
+            speakText(speechText);
+        }, 500);
 
     } catch (e) {
         console.error("Daily summary error", e);
@@ -741,6 +744,20 @@ function playYureBeep() {
     gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.1);
     osc.connect(gain); gain.connect(ctx.destination);
     osc.start(); osc.stop(ctx.currentTime + 0.1);
+}
+
+function playPippiBeep() {
+    const ctx = getAudioCtx(); if(ctx.state === 'suspended') ctx.resume();
+    const playNote = (timeOffset) => {
+        const osc = ctx.createOscillator(); const gain = ctx.createGain();
+        osc.type = 'sine'; osc.frequency.setValueAtTime(2000, ctx.currentTime + timeOffset);
+        gain.gain.setValueAtTime(0, ctx.currentTime + timeOffset);
+        gain.gain.linearRampToValueAtTime(0.4 * userSettings.volume, ctx.currentTime + timeOffset + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + timeOffset + 0.1);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + timeOffset); osc.stop(ctx.currentTime + timeOffset + 0.15);
+    };
+    playNote(0); playNote(0.15);
 }
 
 /* ================= モード切替管理 ================= */
@@ -913,9 +930,16 @@ const PREF_ARV = { "北海道": 1.6, "青森県": 1.8, "岩手県": 1.4, "宮城
 
 const scaleColor = s => {
   const code = String(s);
-  if (code === "1") return "#40e0d0"; if (code === "2") return "#00aa00"; if (code === "3") return "#ffff00"; if (code === "4") return "#ffaa00";
-  if (code.includes("5弱")) return "#ff5500"; if (code.includes("5強")) return "#ff0000"; if (code.includes("6弱")) return "#aa0000"; if (code.includes("6強")) return "#aa00aa";
-  if (code === "7") return "#550055"; return "#222";
+  if (code === "1") return "#f2f2ff"; 
+  if (code === "2") return "#0000ff"; 
+  if (code === "3") return "#00c800"; 
+  if (code === "4") return "#fae600";
+  if (code.includes("5弱")) return "#ff9900"; 
+  if (code.includes("5強")) return "#ff2800"; 
+  if (code.includes("6弱")) return "#fa0000"; 
+  if (code.includes("6強")) return "#a00000";
+  if (code === "7") return "#960096"; 
+  return "#222";
 };
 const magColor = m => m >= 7.5 ? "#ff0000" : m >= 6.0 ? "#ff5500" : m >= 4.0 ? "#ffff00" : "#00ced1";
 const depthColor = d => {
@@ -1842,6 +1866,7 @@ let axisRetrySec = 1000;
 let axisRetryCount = 0;
 const axisRetryMax = 10;
 let axisHeartbeatTimer = null;
+let axisRetryTimer = null;
 
 document.getElementById('axisTokenInput').value = axisToken;
 document.getElementById('btnAxisConnect').addEventListener('click', () => {
@@ -1851,7 +1876,12 @@ document.getElementById('btnAxisConnect').addEventListener('click', () => {
 });
 
 function connectAxis() {
-    if (axisWs) { axisWs.onclose = null; axisWs.close(); }
+    if (axisRetryTimer) { clearTimeout(axisRetryTimer); axisRetryTimer = null; }
+    if (axisWs) { 
+        axisWs.onclose = null; 
+        axisWs.close(); 
+        axisWs = null; 
+    }
     if (!axisToken) return;
     
     axisWs = new WebSocket(`wss://ws.axis.prioris.jp/socket?token=${axisToken}`);
@@ -1891,7 +1921,7 @@ function connectAxis() {
         axisRetrySec = axisRetrySec * 2;
         if (axisRetryCount < axisRetryMax) {
             axisRetryCount++;
-            setTimeout(connectAxis, axisRetrySec);
+            axisRetryTimer = setTimeout(connectAxis, axisRetrySec);
         }
     };
 }
