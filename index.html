@@ -7,10 +7,12 @@
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="source/JMAPoints.js"></script> <style>
-/* --- 既存のCSS --- */
+<script src="source/JMAPoints.js"></script>
+
+<style>
 body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;color:#fff}
 
+/* --- サイドバーコンテナ (レイアウト重なり・バランス崩れ修正用) --- */
 #leftSidebar {
     position: fixed; top: 10px; left: 10px; bottom: 60px; width: 420px;
     display: flex; flex-direction: column; gap: 10px;
@@ -27,6 +29,7 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
     pointer-events: auto; flex-shrink: 0; width: 100% !important; margin: 0 !important; transform: none !important;
 }
 
+/* --- 各パネル共通ベースデザイン --- */
 .base-panel {
     background: rgba(20, 20, 20, 0.95);
     border: 1px solid rgba(255, 255, 255, 0.3);
@@ -36,6 +39,7 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
     overflow: hidden;
 }
 
+/* --- 2Dマップ専用ウィンドウ --- */
 #leafletWrap {
     position: fixed;
     top: 10px;
@@ -51,6 +55,7 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 #leafletMap{width:100%;height:100%;background:#0a0a0a !important;}
 .epicenter-icon { display: flex; align-items: center; justify-content: center; font-size: 40px; color: #ff3b3b; font-weight: bold; text-shadow: 0 0 8px #fff; z-index: 1000 !important; }
 
+/* --- 表示切替ボタン --- */
 #displayModeWrap {
     position: absolute;
     bottom: 60px;
@@ -80,6 +85,7 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 .modeBtn.active { color: #fff; background: rgba(0, 85, 255, 0.6); box-shadow: inset 0 0 10px rgba(0, 85, 255, 0.5); }
 .modeBtn:hover:not(.active) { background: rgba(255, 255, 255, 0.1); color: #ddd; }
 
+/* --- 震度カラー凡例 --- */
 #shindoLegend {
     position: absolute;
     bottom: 10px;
@@ -97,6 +103,7 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 }
 .legendItem { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 900; border-radius: 4px; }
 
+/* --- 最新情報パネル --- */
 #latestPanel{
     border: 2px solid rgba(255,255,255,0.4); padding: 12px;
     background: rgba(20,20,20,0.95); backdrop-filter: blur(10px); box-sizing: border-box;
@@ -113,12 +120,14 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 }
 .tag-checking { background: #ff8c00; color: #fff; padding: 2px 10px; font-weight: 900; font-size: 14px; margin-left: 8px; border: 1px solid #fff; }
 
+/* --- 震度詳細 --- */
 #detailPanel{ height: 200px; }
 #detailScrollArea{ width:100%; height:100%; overflow-y:auto; transition: opacity 0.8s ease-in-out; opacity: 1; }
 #detailScrollArea::-webkit-scrollbar { display: none; }
 .detailItem{display:flex; align-items:center; padding:8px 12px; border-bottom:1px solid rgba(255,255,255,0.15);}
 .detailScaleBox{width:36px; height:36px; border-radius:0; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:900; margin-right:12px; flex-shrink:0;}
 
+/* --- 津波パネル --- */
 #tsunamiPanel{ height: 180px; }
 #tsunamiScrollArea{width:100%; height:100%; overflow-y:auto; transition: opacity 0.8s ease-in-out; opacity: 1;}
 #tsunamiScrollArea::-webkit-scrollbar { display: none; }
@@ -127,6 +136,7 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 .tsunamiInfo { flex:1; font-size:15px; font-weight:900; line-height:1.4; }
 .noTsunami{height:100%; display:flex; align-items:center; justify-content:center; color:#aaa; font-weight:bold; font-size:18px; text-align:center; padding:0 10px;}
 
+/* --- EEW関連 --- */
 #eewContainer { display: flex; flex-direction: column; gap: 8px; }
 #eewPopup {
  position:fixed; top:55px; left:440px; 
@@ -150,6 +160,7 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 .eewSubInfo { font-size: 18px; font-weight: bold; display: flex; gap: 15px; }
 .eewAreas { font-size: 13px; color: #ffa500; margin-top: 8px; font-weight: bold; background: rgba(255,165,0,0.1); padding: 6px; border: 1px solid rgba(255,165,0,0.3); }
 
+/* --- 地震情報ウィンドウ --- */
 #quakePanel{ display: flex; flex-direction: column; }
 .qItem{display:flex;margin-bottom:8px;background:rgba(25,25,25,0.95); border:1px solid rgba(255,255,255,.3);border-radius:0;overflow:hidden;backdrop-filter:blur(5px); cursor:pointer; transition: all 0.2s;}
 .qItem:hover { background:rgba(50,50,50,0.95); }
@@ -158,6 +169,7 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 .qInfo{flex:1;padding:10px 14px;color:#fff}
 .qName{font-size:20px; font-weight:900; margin-bottom:6px;}
 
+/* --- 自由付随コメントパネル --- */
 #commentPanel { height: 130px; }
 .commentHeader { background: rgba(255,255,255,0.1); padding: 4px 10px; font-size: 12px; font-weight: bold; color: #00ffcc; border-bottom: 1px solid rgba(255,255,255,0.2); }
 #commentScrollArea { width: 100%; height: calc(100% - 25px); overflow-y: auto; transition: opacity 0.8s ease-in-out; }
@@ -165,6 +177,7 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 .commentBody { padding: 10px; font-size: 14px; line-height: 1.6; font-weight: bold; white-space: pre-wrap; word-wrap: break-word; }
 .noComment { height: 100%; display: flex; align-items: center; justify-content: center; color: #666; font-size: 14px; }
 
+/* --- 予測長周期地震動階級パネル --- */
 #lpgmPanel { height: 100px; }
 .lpgmHeader { background: rgba(255,255,255,0.1); padding: 4px 10px; font-size: 12px; font-weight: bold; color: #ff4500; border-bottom: 1px solid rgba(255,255,255,0.2); }
 #lpgmBody { display: flex; align-items: center; justify-content: space-around; height: calc(100% - 25px); padding: 0 10px; }
@@ -174,22 +187,34 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 .lpgmClass.active-3 { background: rgba(255,170,0,0.2); color: #ffaa00; border-color: #ffaa00; box-shadow: 0 0 10px rgba(255,170,0,0.5); }
 .lpgmClass.active-4 { background: rgba(255,0,0,0.2); color: #ff0000; border-color: #ff0000; box-shadow: 0 0 10px rgba(255,0,0,0.5); }
 
-#weatherPanel, #volcanoPanel, #dailySummaryPanel { height: 120px; display: none; }
+/* --- AXIS API 情報ウィンドウ --- */
+#weatherPanel { height: 120px; display: none; }
+#volcanoPanel { height: 120px; display: none; }
+#dailySummaryPanel { height: 120px; display: none; }
+
 #newsPanel {
-    position: fixed; top: 1250px; bottom: 90px; left: 50%; transform: translateX(-50%);
-    width: 600px; height: 100px; z-index: 1000; display: none;
+    position: fixed;
+    top: 1250px; 
+    bottom: 90px; left: 50%; transform: translateX(-50%);
+    width: 600px; height: 100px;
+    z-index: 1000;
+    display: none;
 }
+
 .axisHeader { background: rgba(255,255,255,0.1); padding: 4px 10px; font-size: 12px; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.2); }
 #weatherPanel .axisHeader { color: #1e90ff; }
 #volcanoPanel .axisHeader { color: #ff8c00; }
 #newsPanel .axisHeader { color: #ffff00; }
+
 .axisScrollArea { width: 100%; height: calc(100% - 25px); overflow-y: auto; transition: opacity 0.8s ease-in-out; }
 .axisScrollArea::-webkit-scrollbar { display: none; }
 .info-title { font-size: 14px; font-weight: 900; color: #fff; margin-bottom: 4px; }
 .info-title small { font-weight: normal; color: #aaa; margin-left: 8px; }
 .info-text { font-size: 13px; line-height: 1.5; color: #ddd; white-space: pre-wrap; word-wrap: break-word; }
+
 .tag { display: inline-block; padding: 2px 8px; border-radius: 0; font-size: 15px; font-weight: 900; margin-right: 6px; min-width: 60px; text-align: center; }
 
+/* --- 時計パネル (左下下部) --- */
 #clockPanel {
     position: fixed; bottom: 10px; left: 10px; width: 410px;
     background: rgba(20, 20, 20, 0.9); border: 1px solid rgba(255, 255, 255, 0.3);
@@ -197,6 +222,7 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
     z-index: 100; backdrop-filter: blur(10px); letter-spacing: 2px; box-sizing: border-box;
 }
 
+/* --- システムログ (右下) --- */
 #wsLogPanel {
     position: fixed; bottom: 10px; right: 10px; width: 340px; height: 80px;
     background: rgba(0,0,0,0.8); border: 1px solid rgba(0,255,0,0.3);
@@ -204,6 +230,7 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
     overflow-y: auto; z-index: 150; opacity: 0.8; box-sizing: border-box;
 }
 
+/* --- 設定ウィンドウ --- */
 #settingsModal {
     position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
     background: rgba(20, 20, 20, 0.95); border: 1px solid rgba(255, 255, 255, 0.3);
@@ -224,16 +251,48 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 
 @keyframes blink{from{opacity:0.5}to{opacity:1}}
 
+/* ================= レスポンシブ対応 (重複・配置崩れ対策) ================= */
 @media screen and (max-width: 1250px) {
-    body { overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; padding-bottom: 20px; background: #050505; }
-    #eewPopup { position: fixed !important; top: 10px !important; left: 50% !important; transform: translateX(-50%) !important; font-size: 18px !important; z-index: 9999; }
-    #leafletWrap { position: relative !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: auto !important; width: 100% !important; height: 45vh !important; min-height: 300px; z-index: 5; border: none; box-shadow: none; order: 1; margin: 0 !important; flex-shrink: 0; }
-    #leftSidebar, #rightSidebar { position: relative !important; width: 96% !important; margin: 0 auto !important; top: auto !important; left: auto !important; right: auto !important; bottom: auto !important; overflow: visible !important; gap: 8px; flex-shrink: 0; }
+    body { 
+        overflow-y: auto; overflow-x: hidden; 
+        display: flex; flex-direction: column; 
+        padding-bottom: 20px; background: #050505; 
+    }
+    
+    #eewPopup { 
+        position: fixed !important; top: 10px !important; left: 50% !important; 
+        transform: translateX(-50%) !important; font-size: 18px !important; z-index: 9999; 
+    }
+    
+    #leafletWrap { 
+        position: relative !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: auto !important; 
+        width: 100% !important; height: 45vh !important; min-height: 300px; 
+        z-index: 5; border: none; box-shadow: none; order: 1; margin: 0 !important; flex-shrink: 0; 
+    }
+
+    #leftSidebar, #rightSidebar { 
+        position: relative !important; width: 96% !important; margin: 0 auto !important; 
+        top: auto !important; left: auto !important; right: auto !important; bottom: auto !important; 
+        overflow: visible !important; gap: 8px; flex-shrink: 0; 
+    }
     #leftSidebar { order: 2; margin-top: 8px !important; }
     #rightSidebar { order: 3; margin-top: 8px !important; }
-    #newsPanel { position: relative !important; top: auto !important; left: auto !important; bottom: auto !important; transform: none !important; width: 96% !important; margin: 8px auto !important; order: 4; flex-shrink: 0; }
-    #wsLogPanel { position: relative !important; top: auto !important; left: auto !important; right: auto !important; bottom: auto !important; width: 96% !important; margin: 8px auto 30px auto !important; order: 5; height: 120px; max-height: none; flex-shrink: 0; }
-    #clockPanel { position: relative !important; top: auto !important; left: auto !important; bottom: auto !important; width: 96% !important; margin: 8px auto !important; order: 6; flex-shrink: 0; }
+    
+    #newsPanel { 
+        position: relative !important; top: auto !important; left: auto !important; bottom: auto !important; 
+        transform: none !important; width: 96% !important; margin: 8px auto !important; 
+        order: 4; flex-shrink: 0; 
+    }
+    #wsLogPanel { 
+        position: relative !important; top: auto !important; left: auto !important; right: auto !important; bottom: auto !important; 
+        width: 96% !important; margin: 8px auto 30px auto !important; 
+        order: 5; height: 120px; max-height: none; flex-shrink: 0; 
+    }
+    #clockPanel { 
+        position: relative !important; top: auto !important; left: auto !important; bottom: auto !important; 
+        width: 96% !important; margin: 8px auto !important; 
+        order: 6; flex-shrink: 0; 
+    }
 }
 </style>
 </head>
@@ -321,7 +380,7 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
                 <label>EEW受信時の震度予測マップ表示 <input type="checkbox" id="chkEewPrediction"></label>
             </div>
             <div class="setting-item">
-                <label>観測点マップ表示 (詳細アイコン表示) <input type="checkbox" id="chkObsPoints"></label>
+                <label>観測点アイコンの表示 <input type="checkbox" id="chkShowObsPoints"></label>
             </div>
         </div>
 
@@ -394,8 +453,8 @@ window.latestFullQuakeList = [];
 window.eewOriginalTextList = [];
 
 let userSettings = {
-    eewPrediction: false,
-    showObsPoints: false, // 観測点マップ表示
+    eewPrediction: false, // 震度予測マップ表示 (デフォルトOFF)
+    showObsPoints: false, // 観測点アイコン表示 (デフォルトOFF)
     volume: 0.5,
     alarmPitch: 1500,
     speechPitch: 1.0,
@@ -409,10 +468,7 @@ let userSettings = {
     volBgm: 0.3
 };
 
-// 追加のグローバルデータ保持用
-let JMAPointsJson = null;
-let saibunData = null;
-
+// AXIS情報保持用
 const axisHistory = { weather: [], volcano: [], news: [] };
 const MAX_AXIS_HISTORY = 10;
 
@@ -450,15 +506,17 @@ document.getElementById('btnCloseSettings').addEventListener('click', () => {
     document.getElementById('settingsModal').style.display = 'none';
 });
 
-// EEW震度予測 & 観測点トグル制御
+// EEW震度予測トグル制御
 document.getElementById('chkEewPrediction').checked = userSettings.eewPrediction;
 document.getElementById('chkEewPrediction').addEventListener('change', (e) => {
     userSettings.eewPrediction = e.target.checked;
 });
-document.getElementById('chkObsPoints').checked = userSettings.showObsPoints;
-document.getElementById('chkObsPoints').addEventListener('change', (e) => {
+
+// 観測点描画トグル制御
+document.getElementById('chkShowObsPoints').checked = userSettings.showObsPoints;
+document.getElementById('chkShowObsPoints').addEventListener('change', (e) => {
     userSettings.showObsPoints = e.target.checked;
-    refreshMapDisplay(); // トグル時に即座に反映
+    refreshMapDisplay(); // 表示切替時にマップ再描画
 });
 
 const settingKeys = [
@@ -563,6 +621,7 @@ function updateClock() {
     const clock = document.getElementById("clockPanel");
     if(clock) clock.innerText = `${y}/${m}/${d}　${hh}:${mm}:${ss}`;
     
+    // コメントリストの有効期限管理
     const timestamp = now.getTime();
     let changed = false;
     window.eewOriginalTextList = window.eewOriginalTextList.filter(item => {
@@ -571,6 +630,7 @@ function updateClock() {
     });
     if (changed) updateCommentDisplay(window.latestFullQuakeList);
 
+    // 23:50:00 の本日のまとめトリガー
     const todayStr = `${y}-${m}-${d}`;
     if (now.getHours() === 23 && now.getMinutes() === 50 && now.getSeconds() === 0 && summaryPlayedForToday !== todayStr) {
         summaryPlayedForToday = todayStr;
@@ -623,7 +683,9 @@ async function generateDailySummary(todayStr, now) {
         updatePanelScroll("summaryScrollArea", `<div style="padding:10px;"><div class="info-title">本日(${todayStr.replace(/-/g, "/")})の地震まとめ</div><div class="info-text">${textHtml}</div></div>`);
 
         playPippiBeep();
-        setTimeout(() => { speakText(speechText); }, 500);
+        setTimeout(() => {
+            speakText(speechText);
+        }, 500);
 
     } catch (e) {
         console.error("Daily summary error", e);
@@ -712,7 +774,7 @@ function playPippiBeep() {
 
 /* ================= モード切替管理 ================= */
 let isRealtimeOnlyMode = false;
-window.currentEarthquakeData = null; window.currentEarthquakePoints = null;
+window.currentEarthquakeData = null; window.currentEarthquakePoints = null; window.currentEarthquakeIssue = null;
 let currentQuakeList = []; let selectedHistoryQuake = null;
 
 document.getElementById('btnNormalMode').addEventListener('click', () => {
@@ -729,16 +791,17 @@ document.getElementById('btnRealtimeMode').addEventListener('click', () => {
 function refreshMapDisplay() {
     const eqData = selectedHistoryQuake ? selectedHistoryQuake.earthquake : window.currentEarthquakeData;
     const eqPoints = selectedHistoryQuake ? selectedHistoryQuake.points : window.currentEarthquakePoints;
-    if (eqData && eqPoints) updateLeafletMap(eqData, eqPoints, true);
+    const eqIssue = selectedHistoryQuake ? selectedHistoryQuake.issue : window.currentEarthquakeIssue;
+    if (eqData && eqPoints) updateLeafletMap(eqData, eqPoints, eqIssue, true);
     if (window.lastKyoshinData) renderKyoshinCanvas(window.lastKyoshinData);
 }
 
 /* ================= 履歴パネル選択管理 ================= */
 function handleHistoryClick(q) {
     if (selectedHistoryQuake && selectedHistoryQuake.earthquake.time === q.earthquake.time) {
-        selectedHistoryQuake = null; updateLeafletMap(window.currentEarthquakeData, window.currentEarthquakePoints);
+        selectedHistoryQuake = null; updateLeafletMap(window.currentEarthquakeData, window.currentEarthquakePoints, window.currentEarthquakeIssue);
     } else {
-        selectedHistoryQuake = q; updateLeafletMap(q.earthquake, q.points);
+        selectedHistoryQuake = q; updateLeafletMap(q.earthquake, q.points, q.issue);
     }
     renderHistoryPanel();
     if (window.lastKyoshinData) renderKyoshinCanvas(window.lastKyoshinData);
@@ -753,13 +816,17 @@ function renderHistoryPanel() {
         const div = document.createElement("div"); div.className = "qItem";
         if (selectedHistoryQuake && selectedHistoryQuake.earthquake.time === e.time) div.classList.add("selected");
         div.onclick = () => handleHistoryClick(q);
+        
+        let titleName = e.hypocenter.name;
+        if (q.issue && q.issue.type === "ScalePrompt") titleName = "[震度速報]";
+
         div.innerHTML = `
             <div class="scaleBox" style="background:${bg};color:${getContrastColor(bg)};font-size:${historyFs}">${s}</div>
             <div class="qInfo">
-                <div class="qName">${e.hypocenter.name || (q.points && q.points[0] ? q.points[0].addr + "など" : "震度速報")}</div>
+                <div class="qName">${titleName}</div>
                 <div style="display:flex; align-items:center;">
-                    <span class="tag" style="background:${mCol}; color:${getContrastColor(mCol)}">${e.hypocenter.magnitude === -1 ? '不明' : 'M' + e.hypocenter.magnitude.toFixed(1)}</span>
-                    <span class="tag" style="background:${dCol}; color:${getContrastColor(dCol)}">${e.hypocenter.depth === -1 ? '不明' : fmt.depth(e.hypocenter.depth)}</span>
+                    <span class="tag" style="background:${mCol}; color:${getContrastColor(mCol)}">M${e.hypocenter.magnitude !== -1 ? e.hypocenter.magnitude.toFixed(1) : '-.-'}</span>
+                    <span class="tag" style="background:${dCol}; color:${getContrastColor(dCol)}">${fmt.depth(e.hypocenter.depth)}</span>
                     <span style="font-size:12px; opacity:0.8; margin-left:auto;">${e.time.slice(5, 16).replace("-", "/")}</span>
                 </div>
             </div>`;
@@ -828,15 +895,13 @@ async function applyNankaiMockData() {
     };
     const mag = 9.1, depth = 10, eLat = 33.0, eLng = 136.0; const dynamicPoints = [];
 
-    if (saibunData && saibunData.features) {
+    if (prefData && prefData.features) {
         const scaleStrToNum = { "0":0, "1":10, "2":20, "3":30, "4":40, "5弱":45, "5強":50, "6弱":55, "6強":60, "7":70 };
-        const promises = saibunData.features.map(async (f, idx) => {
-            let areaName = (typeof AreaName !== 'undefined' && AreaName[idx]) ? AreaName[idx] : "不明";
-            let prefName = areaName.substring(0, 4).replace(/(都|道|府|県).*/, "$1");
-            const coords = f.geometry.coordinates[0][0];
+        const promises = prefData.features.map(async f => {
+            const prefName = f.properties.name || f.properties.nam_ja; const coords = f.geometry.coordinates[0][0];
             const pLat = Array.isArray(coords[0]) ? coords[0][1] : coords[1], pLng = Array.isArray(coords[0]) ? coords[0][0] : coords[0];
             const rawShindo = await calcPredictedIntensity(mag, depth, eLat, eLng, pLat, pLng, prefName);
-            if (rawShindo !== "0") return { isArea: true, addr: areaName, pref: prefName, scale: scaleStrToNum[rawShindo] || 0 };
+            if (rawShindo !== "0") return { pref: prefName, addr: prefName, scale: scaleStrToNum[rawShindo] || 0 };
             return null;
         });
         const results = await Promise.all(promises); dynamicPoints.push(...results.filter(p => p !== null));
@@ -845,6 +910,7 @@ async function applyNankaiMockData() {
 
     const mockEarthquake = {
         code: 551,
+        issue: { type: "DetailScale" },
         earthquake: { time: timeStr.replace("T", " ").substring(0, 19), hypocenter: { name: "和歌山県南方沖", latitude: eLat, longitude: eLng, depth: depth, magnitude: mag }, maxScale: calculatedMaxScale, domesticTsunami: "Warning" },
         points: dynamicPoints, comments: { freeFormComment: "【南海トラフ地震 警戒宣言】\nこれはデバッグテストです。" }
     };
@@ -858,8 +924,8 @@ async function applyNankaiMockData() {
         latest.innerHTML=`<div class="latestWrap"><div class="latestScale" style="background:${scBg};color:${getContrastColor(scBg)};font-size:58px">${s0}</div><div class="latestLeft"><div class="latestTitle">${e0.hypocenter.name}</div><div class="latestSub">${e0.time.slice(5, 16).replace("-", "/")} 発生</div><div><span class="tag" style="background:${mc0}; color:${getContrastColor(mc0)}">M${e0.hypocenter.magnitude.toFixed(1)}</span><span class="tag" style="background:${dc0}; color:${getContrastColor(dc0)}">${fmt.depth(e0.hypocenter.depth)}</span></div></div></div>`;
     }
     
-    window.currentEarthquakeData = mockEarthquake.earthquake; window.currentEarthquakePoints = mockEarthquake.points; selectedHistoryQuake = null;
-    updateLeafletMap(mockEarthquake.earthquake, mockEarthquake.points);
+    window.currentEarthquakeData = mockEarthquake.earthquake; window.currentEarthquakePoints = mockEarthquake.points; window.currentEarthquakeIssue = mockEarthquake.issue; selectedHistoryQuake = null;
+    updateLeafletMap(mockEarthquake.earthquake, mockEarthquake.points, mockEarthquake.issue);
     currentQuakeList = mockList.filter(x => x.code === 551 && x.earthquake.maxScale !== -1 && x.earthquake.maxScale !== "-1").slice(0, 6); renderHistoryPanel();
     seUpdateApi.currentTime = 0; seUpdateApi.play().catch(e=>{}); setTimeout(() => { seTsunami.currentTime = 0; seTsunami.play().catch(e=>{}); }, 1500);
 }
@@ -973,11 +1039,9 @@ async function calculateEewOffset(eew) {
     const eLat = parseFloat(eew.Latitude), eLng = parseFloat(eew.Longitude), mag = parseFloat(eew.Magunitude), depth = parseInt(eew.Depth);
     if (isNaN(eLat) || isNaN(eLng)) return 0;
     let minDist = Infinity, nLat = eLat, nLng = eLng, nearestPrefName = "";
-    if (saibunData && saibunData.features) {
-        saibunData.features.forEach((f, idx) => {
-            let areaName = (typeof AreaName !== 'undefined' && AreaName[idx]) ? AreaName[idx] : "不明";
-            let prefName = areaName.substring(0, 4).replace(/(都|道|府|県).*/, "$1");
-            const coords = f.geometry.coordinates[0][0];
+    if (prefData && prefData.features) {
+        prefData.features.forEach(f => {
+            const prefName = f.properties.name || f.properties.nam_ja; const coords = f.geometry.coordinates[0][0];
             const pLat = Array.isArray(coords[0]) ? coords[0][1] : coords[1], pLng = Array.isArray(coords[0]) ? coords[0][0] : coords[0];
             const d = getDistance(eLat, eLng, pLat, pLng);
             if (d < minDist) { minDist = d; nLat = pLat; nLng = pLng; nearestPrefName = prefName; }
@@ -1031,15 +1095,13 @@ const lMap = L.map('leafletMap', {
 }).setView([37.5, 137], 5.2);
 
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 20 }).addTo(lMap);
-let geojsonLayer, tsunamiGeojsonLayer = null; let obsPointLayer = null; let latestQuakeMarker = null; let epicenterMarkers = new Map(); let currentTsunamiData = null;
+let geojsonLayer, tsunamiGeojsonLayer = null; let obsLayer = L.layerGroup().addTo(lMap); let latestQuakeMarker = null; let epicenterMarkers = new Map(); let prefData = null; let currentTsunamiData = null;
+window.jmaStationsJson = null;
 
 lMap.createPane('tsunamiPane'); lMap.getPane('tsunamiPane').style.zIndex = 410; lMap.getPane('tsunamiPane').style.pointerEvents = 'none';
-lMap.createPane('shindoPane'); lMap.getPane('shindoPane').style.zIndex = 420; // 観測点用
 lMap.createPane('yurePane'); lMap.getPane('yurePane').style.zIndex = 430; lMap.getPane('yurePane').style.pointerEvents = 'none';
 lMap.createPane('kyoshinPane'); lMap.getPane('kyoshinPane').style.zIndex = 450; lMap.getPane('kyoshinPane').style.pointerEvents = 'none';
 lMap.createPane('wavePane'); lMap.getPane('wavePane').style.zIndex = 460; lMap.getPane('wavePane').style.pointerEvents = 'none';
-
-obsPointLayer = L.layerGroup().addTo(lMap);
 
 const waveCanvas = document.createElement('canvas'); waveCanvas.style.pointerEvents = 'none'; waveCanvas.className = 'leaflet-zoom-animated';
 const WaveLayer = L.Layer.extend({
@@ -1080,108 +1142,103 @@ function drawWaves() {
 
 async function initLeaflet() {
     try {
-        const res = await fetch("saibun.geojson"); saibunData = await res.json();
-        geojsonLayer = L.geoJSON(saibunData, { style: () => ({ color: MAP_BORDER_COLOR, weight: MAP_BORDER_WEIGHT, fillColor: "#222", fillOpacity: 0.5 }) }).addTo(lMap);
-    } catch(e) { console.error("saibun GeoJSON load error", e); }
-    
-    try {
-        const res2 = await fetch("source/JMAstations.json");
-        JMAPointsJson = await res2.json();
-    } catch(e) { console.error("JMAstations.json load error", e); }
-
+        // 都道府県境界ではなく細分区域(saibun.geojson)を使用
+        const res = await fetch("saibun.geojson"); prefData = await res.json();
+        geojsonLayer = L.geoJSON(prefData, { style: () => ({ color: MAP_BORDER_COLOR, weight: MAP_BORDER_WEIGHT, fillColor: "#222", fillOpacity: 0.5 }) }).addTo(lMap);
+    } catch(e) { console.error("saibun.geojson load error", e); }
     try {
         const tRes = await fetch("tsunami.json"); const tData = await tRes.json();
         tsunamiGeojsonLayer = L.geoJSON(tData, { pane: 'tsunamiPane', style: () => ({ color: "transparent", weight: 0, fillColor: "transparent", fillOpacity: 0 }) }).addTo(lMap);
         updateTsunamiMap();
     } catch(e) { console.error("Tsunami GeoJSON load error", e); }
+    try {
+        const stRes = await fetch("source/JMAstations.json"); window.jmaStationsJson = await stRes.json();
+    } catch(e) { console.error("JMAstations load error", e); }
 }
 
-function AreaNameToCode(Name) {
-    if (typeof AreaName === 'undefined' || typeof AreaCode === 'undefined') return null;
-    let idx = AreaName.indexOf(Name);
-    return idx !== -1 ? AreaCode[idx] : null;
-}
-
-function updateLeafletMap(earthquake, points, skipFlyTo = false) {
+function updateLeafletMap(earthquake, points, issue, skipFlyTo = false) {
     if (isEEWActive) return; 
-    if (obsPointLayer) obsPointLayer.clearLayers();
+    
+    // 観測点レイヤーを初期化
+    if(obsLayer) obsLayer.clearLayers();
 
-    let bounds = null; let hasPoints = false; let filled_list = {};
-
-    if (points && points.length > 0) {
-        points.forEach(element => {
-            let scale = element.scale;
-            if (element.isArea) {
-                // エリア名(p.addr) から AreaCode を取得し、塗る対象とする
-                let areaCode = AreaNameToCode(element.addr);
-                if (areaCode) {
-                    if (!filled_list[areaCode] || filled_list[areaCode] < scale) filled_list[areaCode] = scale;
-                }
-            } else {
-                // 観測点名から AreaCode および 緯度経度を取得
-                if (typeof JMAPoints !== 'undefined' && JMAPointsJson) {
-                    let result = JMAPoints.indexOf(element.addr);
-                    if (result !== -1) {
-                        let areaCode = AreaNameToCode(JMAPointsJson[result]["area"]["name"]);
-                        if (areaCode) {
-                            if (!filled_list[areaCode] || filled_list[areaCode] < scale) filled_list[areaCode] = scale;
-                        }
-                        // 観測点アイコン描画
-                        if (userSettings.showObsPoints) {
-                            let ImgUrl = "source/jqk_int" + (scale == 45 ? "50" : scale == 50 ? "55" : scale == 55 ? "60" : scale == 60 ? "65" : scale == 70 ? "7" : scale/10) + ".png";
-                            if(scale == 46) ImgUrl = "source/jqk_int_.png";
-                            let latlng = [JMAPointsJson[result]["lat"], JMAPointsJson[result]["lon"]];
-                            let m = L.marker(latlng, {
-                                icon: L.icon({ iconUrl: ImgUrl, iconSize: [20, 20] }),
-                                pane: 'shindoPane'
-                            }).bindPopup(element.addr + "：" + fmt.shindo(scale, earthquake?.hypocenter?.depth));
-                            obsPointLayer.addLayer(m);
-                        }
-                    }
-                }
-            }
-        });
-    }
-
+    let bounds = null; let hasPoints = false;
+    
     if (earthquake?.hypocenter) {
         const {latitude: lat, longitude: lng} = earthquake.hypocenter;
-        if (lat && lat !== -200 && lat !== -1) {
+        if (lat && lat !== -200 && (issue?.type !== "ScalePrompt")) {
             bounds = L.latLngBounds([lat, lng], [lat, lng]);
             if (latestQuakeMarker) latestQuakeMarker.setLatLng([lat, lng]);
             else latestQuakeMarker = L.marker([lat, lng], { icon: L.divIcon({className:'epicenter-icon', html:'×', iconSize:[50,50], iconAnchor:[25,25]}) }).addTo(lMap);
             
             let shouldHide = (isRealtimeOnlyMode && !selectedHistoryQuake) || isEEWActive;
             latestQuakeMarker.setOpacity(shouldHide ? 0 : 1);
+        } else if (latestQuakeMarker) {
+            latestQuakeMarker.setOpacity(0);
         }
     }
 
-    if (geojsonLayer && saibunData) {
-        geojsonLayer.eachLayer(layer => {
-            let idx = saibunData.features.indexOf(layer.feature);
-            if (idx !== -1 && typeof AreaCode !== 'undefined') {
-                let code = AreaCode[idx];
-                if (code && filled_list[code] >= 10 && bounds) {
-                    bounds.extend(layer.getBounds());
-                    hasPoints = true;
+    if (geojsonLayer && points) {
+        const areaMax = {}; 
+        
+        points.forEach(p => { 
+            let areaName = p.isArea ? p.addr : null;
+            // 観測点(isArea: false)の場合、JMAstationsから該当する細分区域名を引く
+            if (!p.isArea && typeof JMAPoints !== 'undefined' && window.jmaStationsJson) {
+                let idx = JMAPoints.indexOf(p.addr);
+                if (idx !== -1 && window.jmaStationsJson[idx].area) {
+                    areaName = window.jmaStationsJson[idx].area.name;
+                }
+            }
+            if(!areaName) areaName = p.addr; // フォールバック
+
+            if(!areaMax[areaName] || p.scale > areaMax[areaName]) {
+                areaMax[areaName] = p.scale;
+            }
+
+            // 観測点描画（設定でONの場合のみ）
+            if (userSettings.showObsPoints && !p.isArea && typeof JMAPoints !== 'undefined' && window.jmaStationsJson) {
+                let idx = JMAPoints.indexOf(p.addr);
+                if (idx !== -1) {
+                    let stLat = window.jmaStationsJson[idx].lat;
+                    let stLon = window.jmaStationsJson[idx].lon;
+                    let scale = p.scale;
+                    let iconTheme = "jqk";
+                    let imgUrl = "source/" + iconTheme + "_int" + (scale == 45 ? "50" : scale == 50 ? "55" : scale == 55 ? "60" : scale == 60 ? "65" : scale == 70 ? "7" : scale / 10) + ".png";
+                    if (scale == 46) imgUrl = "source/" + iconTheme + "_int_.png";
+
+                    let sIcon = L.icon({ iconUrl: imgUrl, iconSize: [20, 20] });
+                    let marker = L.marker([stLat, stLon], { icon: sIcon });
+                    marker.bindPopup(p.addr + "：" + fmt.shindo(scale, earthquake?.hypocenter?.depth));
+                    obsLayer.addLayer(marker);
                 }
             }
         });
-        geojsonLayer.setStyle(f => {
-            let fillCol = "transparent";
-            if (!(isRealtimeOnlyMode && !isEEWActive && !selectedHistoryQuake)) {
-                let idx = saibunData.features.indexOf(f);
-                if (idx !== -1 && typeof AreaCode !== 'undefined') {
-                    let code = AreaCode[idx];
-                    if (code && filled_list[code]) fillCol = scaleColor(fmt.shindo(filled_list[code], earthquake?.hypocenter?.depth));
-                }
+
+        // 震度速報(ScalePrompt)や詳細情報による細分区域の塗りつぶし・バウンダリ拡張
+        geojsonLayer.eachLayer(layer => {
+            const name = layer.feature.properties.name || layer.feature.properties.nam_ja || layer.feature.properties.code;
+            const scale = areaMax[name];
+            if (scale && scale >= 10) { 
+                if(!bounds) bounds = layer.getBounds();
+                else bounds.extend(layer.getBounds()); 
+                hasPoints = true; 
             }
-            return { color: MAP_BORDER_COLOR, weight: MAP_BORDER_WEIGHT, fillColor: fillCol, fillOpacity: Object.keys(filled_list).length > 0 ? 0.8 : 0.5 };
+        });
+
+        geojsonLayer.setStyle(f => {
+            const name = f.properties.name || f.properties.nam_ja || f.properties.code;
+            let fillCol = "transparent";
+            if (!(isRealtimeOnlyMode && !isEEWActive && !selectedHistoryQuake)) { 
+                fillCol = areaMax[name] ? scaleColor(fmt.shindo(areaMax[name], earthquake?.hypocenter?.depth)) : "transparent"; 
+            }
+            return { color: MAP_BORDER_COLOR, weight: MAP_BORDER_WEIGHT, fillColor: fillCol, fillOpacity: 0.8 };
         });
     }
 
     if (!skipFlyTo && bounds) {
         if (hasPoints) lMap.flyToBounds(bounds, { padding: [30, 30], maxZoom: 8, duration: 1.5 });
-        else if (earthquake?.hypocenter?.latitude && earthquake.hypocenter.latitude !== -200 && earthquake.hypocenter.latitude !== -1) lMap.flyTo([earthquake.hypocenter.latitude, earthquake.hypocenter.longitude], 8, { duration: 1.5 });
+        else if(earthquake?.hypocenter?.latitude) lMap.flyTo([earthquake.hypocenter.latitude, earthquake.hypocenter.longitude], 8, { duration: 1.5 });
     }
 
     const area = document.getElementById("detailScrollArea");
@@ -1189,11 +1246,9 @@ function updateLeafletMap(earthquake, points, skipFlyTo = false) {
         area.innerHTML = "";
         [...points].sort((a,b)=>b.scale - a.scale).forEach(p => {
             const s = fmt.shindo(p.scale, earthquake?.hypocenter?.depth); const c = scaleColor(s);
-            area.innerHTML += `<div class="detailItem"><div class="detailScaleBox" style="background:${c}; color:${getContrastColor(c)}">${s}</div><div class="detailPlace">${p.pref || ''} ${p.addr || ''}</div></div>`;
+            area.innerHTML += `<div class="detailItem"><div class="detailScaleBox" style="background:${c}; color:${getContrastColor(c)}">${s}</div><div class="detailPlace">${p.pref} ${p.addr || ''}</div></div>`;
         });
         area.scrollTop = 0; startAutoScroll("detailScrollArea");
-    } else if (area) {
-        area.innerHTML = "";
     }
 }
 
@@ -1288,11 +1343,10 @@ async function updateWolfxEEW(data) {
         if (epicenterMarkers.has(id)) { epicenterMarkers.get(id).setLatLng([eLat, eLng]); } else { const m = L.marker([eLat, eLng], { icon: L.divIcon({className:'epicenter-icon', html:'×', iconSize:[60,60], iconAnchor:[30,30]}) }).addTo(lMap); epicenterMarkers.set(id, m); }
         
         if (geojsonLayer) {
-            if (userSettings.eewPrediction && saibunData) {
-                const updateStyles = saibunData.features.map(async (f, idx) => {
-                    let areaName = (typeof AreaName !== 'undefined' && AreaName[idx]) ? AreaName[idx] : (f.properties.name || f.properties.nam_ja || "不明");
-                    let prefName = areaName.substring(0, 4).replace(/(都|道|府|県).*/, "$1");
-                    const coords = f.geometry.coordinates[0][0]; 
+            // ユーザー設定により震度予測をONにしている場合のみ計算と塗りつぶしを行う
+            if (userSettings.eewPrediction) {
+                const updateStyles = prefData.features.map(async f => {
+                    const prefName = f.properties.name || f.properties.nam_ja || f.properties.code; const coords = f.geometry.coordinates[0][0]; 
                     const pLat = Array.isArray(coords[0]) ? coords[0][1] : coords[1], pLng = Array.isArray(coords[0]) ? coords[0][0] : coords[0];
                     let maxShindoNum = 0, maxShindoStrResult = "0";
                     for (let [eewId, eew] of activeEEWs.entries()) {
@@ -1304,20 +1358,19 @@ async function updateWolfxEEW(data) {
                             if (num > maxShindoNum) { maxShindoNum = num; maxShindoStrResult = limitedShindo; }
                         }
                     }
-                    return { idx: idx, shindo: maxShindoStrResult };
+                    return { id: f.id || prefName, shindo: maxShindoStrResult };
                 });
                 const results = await Promise.all(updateStyles);
                 geojsonLayer.eachLayer(layer => {
-                    let idx = saibunData.features.indexOf(layer.feature);
-                    const res = results.find(r => r.idx === idx);
+                    const prefName = layer.feature.properties.name || layer.feature.properties.nam_ja || layer.feature.properties.code; const res = results.find(r => r.id === (layer.feature.id || prefName));
                     if (res && fmt.intensityToNum(res.shindo) >= 1) { bounds.extend(layer.getBounds()); hasWarnArea = true; }
                 });
                 geojsonLayer.setStyle(f => {
-                    let idx = saibunData.features.indexOf(f);
-                    const res = results.find(r => r.idx === idx);
+                    const prefName = f.properties.name || f.properties.nam_ja || f.properties.code; const res = results.find(r => r.id === (f.id || prefName));
                     return { color: MAP_BORDER_COLOR, weight: MAP_BORDER_WEIGHT, fillColor: scaleColor(res ? res.shindo : "0"), fillOpacity: 0.7 };
                 });
             } else {
+                // 震度予測OFF時は色を消す
                 geojsonLayer.setStyle({ color: MAP_BORDER_COLOR, weight: MAP_BORDER_WEIGHT, fillColor: "transparent", fillOpacity: 0.5 });
             }
         }
@@ -1815,8 +1868,7 @@ async function loadQuakes(){
                 const s = fmt.shindo(latestEQ.earthquake.maxScale, latestEQ.earthquake.hypocenter.depth);
                 const depth = latestEQ.earthquake.hypocenter.depth;
                 const depthStr = depth === 0 ? "ごく浅い" : (depth === -1 ? "不明" : depth + "キロ");
-                const nameStr = latestEQ.earthquake.hypocenter.name || (latestEQ.points[0] ? latestEQ.points[0].addr + "など" : "どこか");
-                speakText(`${nameStr}で地震が発生。最大震度は${s}。マグニチュードは${latestEQ.earthquake.hypocenter.magnitude}。深さは、${depthStr}、です。`);
+                speakText(`${latestEQ.earthquake.hypocenter.name}で地震が発生。最大震度は${s}。マグニチュードは${latestEQ.earthquake.hypocenter.magnitude}。深さは、${depthStr}、です。`);
             }
         }
         if (tsunamiData && !isInitialLoad) {
@@ -1830,44 +1882,29 @@ async function loadQuakes(){
         if (playUpdateApi) { seUpdateApi.currentTime = 0; seUpdateApi.play().catch(e=>{}); }
 
         if (latestEQ && !isEEWActive) {
-            window.currentEarthquakeData = latestEQ.earthquake; window.currentEarthquakePoints = latestEQ.points;
+            window.currentEarthquakeData = latestEQ.earthquake; window.currentEarthquakePoints = latestEQ.points; window.currentEarthquakeIssue = latestEQ.issue;
             const latest = document.getElementById("latestPanel");
             if(latest) {
+                let latestTitleName = latestEQ.earthquake.hypocenter.name;
+                if (latestEQ.issue && latestEQ.issue.type === "ScalePrompt") latestTitleName = "[震度速報]";
+
                 const e0=latestEQ.earthquake, s0=fmt.shindo(e0.maxScale, e0.hypocenter.depth), scBg=scaleColor(s0);
                 const checkingTag = e0.domesticTsunami === "Checking" ? `<span class="tag-checking">調査中</span>` : "";
                 const dynamicFontSize = s0.length > 1 ? (s0 === "不明" || s0 === "遠地" ? "28px" : "42px") : "58px";
-                
-                let titleText = e0.hypocenter.name;
-                if (!titleText && latestEQ.points && latestEQ.points.length > 0) {
-                    titleText = latestEQ.points[0].addr + "など";
-                }
-                if (!titleText) titleText = "情報なし";
-
-                if (latestEQ.issue && latestEQ.issue.type === "ScalePrompt") {
-                    titleText = "【震度速報】" + titleText;
-                } else if (latestEQ.issue && latestEQ.issue.type === "Foreign") {
-                    titleText = "【遠地地震】" + titleText;
-                }
-
-                let magText = e0.hypocenter.magnitude === -1 ? "不明" : `M${e0.hypocenter.magnitude.toFixed(1)}`;
-                let depthText = e0.hypocenter.depth === -1 ? "不明" : fmt.depth(e0.hypocenter.depth);
-                let mc0 = magColor(e0.hypocenter.magnitude);
-                let dc0 = depthColor(e0.hypocenter.depth);
-
                 latest.innerHTML=`
                     <div class="latestWrap">
                         <div class="latestScale" style="background:${scBg};color:${getContrastColor(scBg)};font-size:${dynamicFontSize}">${s0}</div>
                         <div class="latestLeft">
-                            <div class="latestTitle">${titleText} ${checkingTag}</div>
+                            <div class="latestTitle">${latestTitleName} ${checkingTag}</div>
                             <div class="latestSub">${e0.time.slice(5,16).replace("-","/") || ''} 発生</div>
                             <div>
-                                <span class="tag" style="background:${mc0}; color:${getContrastColor(mc0)}">${magText}</span>
-                                <span class="tag" style="background:${dc0}; color:${getContrastColor(dc0)}">${depthText}</span>
+                                <span class="tag" style="background:${magColor(e0.hypocenter.magnitude)}; color:${getContrastColor(magColor(e0.hypocenter.magnitude))}">M${e0.hypocenter.magnitude !== -1 ? e0.hypocenter.magnitude.toFixed(1) : '-.-'}</span>
+                                <span class="tag" style="background:${depthColor(e0.hypocenter.depth)}; color:${getContrastColor(depthColor(e0.hypocenter.depth))}">${fmt.depth(e0.hypocenter.depth)}</span>
                             </div>
                         </div>
                     </div>`;
             }
-            if (!selectedHistoryQuake && !isYureDetecting) updateLeafletMap(latestEQ.earthquake, latestEQ.points);
+            if (!selectedHistoryQuake && !isYureDetecting) updateLeafletMap(latestEQ.earthquake, latestEQ.points, latestEQ.issue);
             updateLPGMDisplay(latestEQ.earthquake.hypocenter.magnitude, latestEQ.earthquake.hypocenter.depth);
         }
         updateTsunamiDisplay(tsunamiData, latestEQ?.earthquake);
