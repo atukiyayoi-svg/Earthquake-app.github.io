@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>EPICA - System Specifications & Manual</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<style>
+    :root {
+        --bg-color: #0a0a0a;
+        --panel-bg: rgba(20, 20, 20, 0.95);
+        --text-main: #e0e0e0;
+        --text-muted: #aaaaaa;
+        --accent-blue: #0055ff;
+        --accent-cyan: #00ffcc;
+        --accent-red: #ff4444;
+        --accent-orange: #ff9900;
+        --border-color: rgba(255, 255, 255, 0.2);
+    }
+    
+    body {
+        margin: 0;
+        padding: 20px;
+        background: var(--bg-color);
+        color: var(--text-main);
+        font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+        line-height: 1.6;
+    }
+
+    .container {
+        max-width: 900px;
+        margin: 0 auto;
+        background: var(--panel-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 30px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.8);
+    }
+
+    h1 {
+        color: #fff;
+        text-align: center;
+        font-size: 28px;
+        letter-spacing: 2px;
+        border-bottom: 2px solid var(--accent-blue);
+        padding-bottom: 10px;
+        margin-top: 0;
+    }
+
+    h2 {
+        color: var(--accent-cyan);
+        font-size: 20px;
+        border-left: 4px solid var(--accent-cyan);
+        padding-left: 10px;
+        margin-top: 30px;
+        background: rgba(0, 255, 204, 0.1);
+        padding-top: 5px;
+        padding-bottom: 5px;
+    }
+
+    h3 {
+        color: #fff;
+        font-size: 16px;
+        margin-top: 20px;
+    }
+
+    p {
+        margin-bottom: 15px;
+        color: var(--text-muted);
+    }
+
+    ul {
+        color: var(--text-muted);
+        padding-left: 20px;
+    }
+
+    li {
+        margin-bottom: 8px;
+    }
+
+    a {
+        color: var(--accent-blue);
+        text-decoration: none;
+    }
+
+    a:hover {
+        text-decoration: underline;
+    }
+
+    .alert-box {
+        background: rgba(255, 68, 68, 0.1);
+        border: 1px solid var(--accent-red);
+        border-left: 5px solid var(--accent-red);
+        padding: 15px;
+        border-radius: 4px;
+        margin: 20px 0;
+    }
+
+    .alert-box h3 {
+        color: var(--accent-red);
+        margin-top: 0;
+        margin-bottom: 10px;
+    }
+
+    .alert-box p {
+        color: #ffcccc;
+        margin: 0;
+        font-weight: bold;
+    }
+
+    .legal-box {
+        background: rgba(255, 153, 0, 0.1);
+        border: 1px solid var(--accent-orange);
+        border-left: 5px solid var(--accent-orange);
+        padding: 15px;
+        border-radius: 4px;
+        margin: 20px 0;
+    }
+
+    .legal-box h3 {
+        color: var(--accent-orange);
+        margin-top: 0;
+        margin-bottom: 10px;
+    }
+
+    .credit-box {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        padding: 15px;
+        border-radius: 4px;
+        margin: 20px 0;
+    }
+    
+    .badge {
+        display: inline-block;
+        padding: 2px 6px;
+        background: #333;
+        color: #fff;
+        font-size: 12px;
+        border-radius: 3px;
+        margin-right: 5px;
+        border: 1px solid #555;
+    }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h1>EPICA 仕様書及び取扱説明書</h1>
+    <p style="text-align: center;">バージョン: V4.1.0</p>
+
+    <section>
+        <h2>1. アプリケーションの使い方</h2>
+        <p>本システム「EPICA」は、各種APIから取得したデータを基に、リアルタイムの地震動（強震モニタ）、緊急地震速報（EEW）、津波情報、各種気象情報を2Dマップ上で総合的に監視・可視化するツールです。</p>
+        
+        <h3>基本操作</h3>
+        <ul>
+            <li><strong>起動と音声:</strong> 起動画面で「スタート」をクリックするとシステムが初期化されます。ブラウザの仕様上、画面内を一度クリック/タップすることで音声（読み上げ・通知音）が有効になります。</li>
+            <li><strong>表示モードの切替:</strong> 画面中央下部のボタンでモードを切り替えます。
+                <ul>
+                    <li><span class="badge">通常表示</span> 最新の地震情報、過去の震源地、予測震度マップなどを総合的に表示します。</li>
+                    <li><span class="badge">リアルタイム揺れのみ</span> 過去の地震のアイコンや色塗りを非表示にし、現在起きているリアルタイムの揺れ（強震モニタの点）のみにフォーカスします。</li>
+                </ul>
+            </li>
+            <li><strong>設定 (⚙):</strong> 右下の設定ボタンから、各種音量（基本音量、BGM、各種SE）、音声読み上げの速度・ピッチ、描画オプション（震央推定機能、観測点表示など）を変更できます。</li>
+            <li><strong>履歴の確認:</strong> 右側の「地震情報ウィンドウ」から過去の地震をクリックすると、その地震の詳細（震央、最大震度、観測点ごとの震度）がマップおよび左パネルに表示されます。</li>
+        </ul>
+    </section>
+
+    <section>
+        <div class="alert-box">
+            <h3>⚠️ 予測機能に関する重要・免責事項</h3>
+            <p>本システム上で描画される以下の情報は、<strong>独自のアルゴリズムに基づく完全な「予測」ならびに「推定」であり、正確なものではありません。</strong></p>
+            <ul style="color: #ffcccc; margin-top: 10px;">
+                <li><strong>リアルタイム揺れ検知による「震央推定機能」:</strong> 強震モニタの観測点データから計算上で推定したものであり、実際の震源とは大きく異なる場合があります。</li>
+                <li><strong>P波・S波の伝播サークルの描画:</strong> 理論値に基づく簡易的な描画であり、実際の地震波の到達を示すものではありません。</li>
+                <li><strong>J-SHISモデルを用いた「予測震度マップ」:</strong> 地盤増幅率（ARV）を用いた計算上の予測であり、実際の観測震度を保証するものではありません。</li>
+                <li><strong>予測長周期地震動階級 (LPGM):</strong> マグニチュードと深さから簡易算出された参考値です。</li>
+            </ul>
+            <p style="margin-top: 10px;">本システムの情報を用いて生じた、いかなる損害・トラブルについても作者は一切の責任を負いません。実際の避難行動や意思決定の際は、必ず<strong>気象庁や自治体が発表する公式の防災情報</strong>に従ってください。</p>
+        </div>
+    </section>
+
+    <section>
+        <h2>2. 取得情報の情報元・使用API</h2>
+        <p>本システムは以下の外部APIおよびオープンデータを利用して構築されています。</p>
+        <ul>
+            <li><strong>リアルタイム震度データ (強震モニタ):</strong><br>
+                取得元: Yahoo! 防災速報 / NIED (防災科学技術研究所)<br>
+                用途: リアルタイムの揺れの可視化、震央推定アルゴリズムのソース。</li>
+            <li><strong>地震履歴・津波情報 (P2Pquake API):</strong><br>
+                取得元: P2P地震情報 API v2 (<a href="https://www.p2pquake.net/json_api_v2/" target="_blank">https://www.p2pquake.net/json_api_v2/</a>)<br>
+                用途: 過去の地震履歴一覧の取得、津波警報・注意報のエリア情報の取得。</li>
+            <li><strong>緊急地震速報 (Wolfx API):</strong><br>
+                取得元: Wolfx WebSocket API (<a href="https://wolfx.jp/" target="_blank">https://wolfx.jp/</a>)<br>
+                用途: 緊急地震速報（警報・予報）の即時受信および表示。</li>
+            <li><strong>総合防災情報 (AXIS API):</strong><br>
+                取得元: AXIS API (Prioris)<br>
+                用途: 気象情報、火山情報、ニュース速報の受信。※利用にはユーザー自身が取得した「アクセストークン」をシステム設定に入力する必要があります。</li>
+            <li><strong>表層地盤増幅率データ (J-SHIS API):</strong><br>
+                取得元: 防災科学技術研究所 J-SHIS API V4 (<a href="https://www.j-shis.bosai.go.jp/api" target="_blank">https://www.j-shis.bosai.go.jp/api</a>)<br>
+                用途: EEW受信時における、各地域（250mメッシュ相当）の精緻な予測震度の計算補正。</li>
+            <li><strong>ベースマップタイル:</strong><br>
+                取得元: CartoDB Dark Matter (<a href="https://carto.com/" target="_blank">https://carto.com/</a>) / レンダリングエンジン: Leaflet.js</li>
+        </ul>
+    </section>
+
+    <section>
+        <div class="legal-box">
+            <h3>⚖️ 法律関連の注意事項 (気象業務法について)</h3>
+            <p>日本国内において、気象庁以外の者が独自の計算式を用いて「予測震度」や「緊急地震速報に類する情報」を作成し、これを<strong>不特定多数の一般大衆に向けて配信・通知する行為</strong>（インターネット上での公開配信やSNSでの自動発信など）は、気象業務法に基づく<strong>気象庁長官の「予報業務許可（地震動）」</strong>が必要となる場合があります。</p>
+            <p style="margin-top: 10px;">本システム（HTMLファイル）をユーザー自身がローカル環境等で実行し、自己の判断・監視のために個人的に利用する範囲（自己完結型の処理）であれば問題ありません。しかし、本システムの画面をライブ配信したり、生成された予測震度マップを不特定多数へ二次配信したりする行為は、関係法令に抵触する恐れがあるため十分にご注意ください。</p>
+            <p style="margin-top: 5px; font-size: 14px;">※詳細については気象庁の公式見解をご確認ください。<br><a href="https://www.jma.go.jp/jma/kishou/shinsei/yohou/yohou.html" target="_blank">気象庁: 予報業務の許可について</a></p>
+        </div>
+    </section>
+
+    <section>
+        <h2>3. 権利関係・クレジット</h2>
+        
+        <div class="credit-box">
+            <h3>🎵 楽曲（BGM）について</h3>
+            <p>本システム内で時間帯に合わせて再生される通常音楽（朝.wav, 昼.wav, 夕方.wav, 夜.wav）は、以下のサイトの著作物を利用しています。</p>
+            <ul>
+                <li><strong>配布元:</strong> 創作堂さくら紅葉</li>
+                <li><strong>URL:</strong> <a href="https://yukizakura.net/" target="_blank">https://yukizakura.net/</a></li>
+            </ul>
+        </div>
+
+        <div class="credit-box" style="border-color: var(--accent-red);">
+            <h3>🔔 独自通知音に関する著作権保護</h3>
+            <p>システムに組み込まれている緊急地震速報の新規受信音である<strong>「First.mp3」の音源は、本システムの作者が独自に作成したオリジナル音源</strong>です。</p>
+            <p style="color: #ffcccc; font-weight: bold; margin-top: 5px;">【禁止事項】<br>いかなる理由であっても、この音源（First.mp3）を作者の事前の許可なく第三者が抽出し、他のソフトウェア、動画、配信等で使用すること、および二次配布を行うことを固く禁じます。</p>
+        </div>
+        
+        <div class="credit-box">
+            <h3>🌐 その他の権利について</h3>
+            <p>取得している各種地震・気象データ、GeoJSONポリゴンデータ、およびJ-SHISの地盤データ等は、各配信元・作成元の利用規約および著作権に帰属します。データの利用に関しては各サービスのオープンデータ利用規約に従ってください。</p>
+        </div>
+    </section>
+
+</div>
+
+</body>
+</html>
