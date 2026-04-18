@@ -98,7 +98,6 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
         -2px  2px 0 #ffff00,
          2px  2px 0 #ffff00,
          0 0 8px #fff; 
-    z-index: 1000 !important; 
 }
 
 /* --- 表示切替ボタン --- */
@@ -448,9 +447,6 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
             <div class="setting-item">
                 <label>観測点アイコンの表示 <input type="checkbox" id="chkShowObsPoints"></label>
             </div>
-            <div class="setting-item">
-                <label>震央推定機能 (リアルタイム揺れ検知時) <input type="checkbox" id="chkEnableEpicenter"></label>
-            </div>
         </div>
 
         <div class="setting-group">
@@ -524,7 +520,6 @@ window.eewOriginalTextList = [];
 let userSettings = {
     eewPrediction: false,
     showObsPoints: false,
-    enableEpicenterEstimate: true,
     volume: 0.5,
     alarmPitch: 1500,
     speechPitch: 1.0,
@@ -588,15 +583,6 @@ document.getElementById('chkShowObsPoints').addEventListener('change', (e) => {
     refreshMapDisplay();
 });
 
-document.getElementById('chkEnableEpicenter').checked = userSettings.enableEpicenterEstimate;
-document.getElementById('chkEnableEpicenter').addEventListener('change', (e) => {
-    userSettings.enableEpicenterEstimate = e.target.checked;
-    if (!e.target.checked && yureEpicenterMarker) {
-        lMap.removeLayer(yureEpicenterMarker);
-        yureEpicenterMarker = null;
-    }
-});
-
 const settingKeys = [
     'vol', 'alarmPitch', 'speechPitch', 'speechRate', 
     'volFirst', 'volLast', 'volTsunami', 'volUpdateApi', 'volUpdateEew', 'volWarning', 'volBgm'
@@ -612,23 +598,6 @@ settingKeys.forEach(key => {
         });
     }
 });
-
-/* ================= 揺れ検知・震央推定 ステート ================= */
-let isYureDetecting = false;
-let yureGridLayer = null;
-let yureEpicenterMarker = null;
-let lastYureDetectTime = 0;
-let yureBeepInterval = 0;
-
-const HISTORY_LEN = 10;
-let intensityHistory = []; 
-let historyIndex = 0;
-
-let siteDetectedLevel = new Map(); 
-let siteDetectedTime = new Map();  
-
-let calculatedEpicenter = null; 
-let pastEpicenters = [];        
 
 /* ================= BGM・時間帯管理 ================= */
 let currentBgmSrc = null;
@@ -647,7 +616,6 @@ function getBgmType() {
 
 function checkIsNormalState() {
     if (isEEWActive) return false;
-    if (isYureDetecting) return false;
     if (currentTsunamiData && !currentTsunamiData.cancelled && currentTsunamiData.areas && currentTsunamiData.areas.length > 0) return false;
     if (window.currentEarthquakeData && window.currentEarthquakeData.domesticTsunami) {
         const dt = window.currentEarthquakeData.domesticTsunami;
@@ -822,18 +790,6 @@ function playEEWBeep() {
     playNote(0); playNote(0.2); playNote(0.4);
 }
 
-function playYureBeep() {
-    if (isEEWActive) return; 
-    const ctx = getAudioCtx(); if(ctx.state === 'suspended') return;
-    const osc = ctx.createOscillator(); const gain = ctx.createGain();
-    osc.type = 'square'; osc.frequency.setValueAtTime(880, ctx.currentTime);
-    gain.gain.setValueAtTime(0, ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(0.1 * userSettings.volume, ctx.currentTime + 0.01);
-    gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.1);
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.start(); osc.stop(ctx.currentTime + 0.1);
-}
-
 function playPippiBeep() {
     const ctx = getAudioCtx(); if(ctx.state === 'suspended') ctx.resume();
     const playNote = (timeOffset) => {
@@ -1001,8 +957,6 @@ async function applyNankaiMockData() {
         latest.innerHTML=`<div class="latestWrap"><div class="latestScale" style="background:${scBg};color:${getContrastColor(scBg)};font-size:58px">${s0}</div><div class="latestLeft"><div class="latestTitle">${e0.hypocenter.name}</div><div class="latestSub">${e0.time.slice(5, 16).replace("-", "/")} 発生</div><div><span class="tag" style="background:${mc0}; color:${getContrastColor(mc0)}">M${e0.hypocenter.magnitude.toFixed(1)}</span><span class="tag" style="background:${dc0}; color:${getContrastColor(dc0)}">${fmt.depth(e0.hypocenter.depth)}</span></div></div></div>`;
     }
     
-    // デバッグ完了時は確実に通常モードへリセットし、マーカーが見えるようにする
-    clearYureDetection();
     isRealtimeOnlyMode = false;
     document.getElementById('btnNormalMode').classList.add('active'); 
     document.getElementById('btnRealtimeMode').classList.remove('active');
@@ -1066,7 +1020,6 @@ class Formatter {
 const fmt = new Formatter();
 
 /* ================= ジオメトリ共通処理 ================= */
-// 修正：GeoJSONのポリゴンから代表点（バウンディングボックスの中心）を取得するよう改善
 function getPolygonPoint(f) {
     let geom = f.geometry;
     if (!geom || !geom.coordinates) return {lat: 0, lng: 0};
@@ -1225,9 +1178,10 @@ let geojsonLayer, tsunamiGeojsonLayer = null; let obsLayer = L.layerGroup().addT
 window.jmaStationsJson = null;
 
 lMap.createPane('tsunamiPane'); lMap.getPane('tsunamiPane').style.zIndex = 410; lMap.getPane('tsunamiPane').style.pointerEvents = 'none';
-lMap.createPane('yurePane'); lMap.getPane('yurePane').style.zIndex = 430; lMap.getPane('yurePane').style.pointerEvents = 'none';
 lMap.createPane('kyoshinPane'); lMap.getPane('kyoshinPane').style.zIndex = 450; lMap.getPane('kyoshinPane').style.pointerEvents = 'none';
 lMap.createPane('wavePane'); lMap.getPane('wavePane').style.zIndex = 460; lMap.getPane('wavePane').style.pointerEvents = 'none';
+// 震源マーカー用の一番上のペイン
+lMap.createPane('epicenterPane'); lMap.getPane('epicenterPane').style.zIndex = 500; lMap.getPane('epicenterPane').style.pointerEvents = 'none';
 
 const waveCanvas = document.createElement('canvas'); waveCanvas.style.pointerEvents = 'none'; waveCanvas.className = 'leaflet-zoom-animated';
 const WaveLayer = L.Layer.extend({
@@ -1284,7 +1238,6 @@ async function initLeaflet() {
 function updateLeafletMap(earthquake, points, issue, skipFlyTo = false) {
     if (isEEWActive) return; 
     
-    // 観測点レイヤーを初期化
     if(obsLayer) obsLayer.clearLayers();
 
     let bounds = null; let hasPoints = false;
@@ -1294,7 +1247,10 @@ function updateLeafletMap(earthquake, points, issue, skipFlyTo = false) {
         if (lat && lat !== -200 && (issue?.type !== "ScalePrompt")) {
             bounds = L.latLngBounds([lat, lng], [lat, lng]);
             if (latestQuakeMarker) latestQuakeMarker.setLatLng([lat, lng]);
-            else latestQuakeMarker = L.marker([lat, lng], { icon: L.divIcon({className:'epicenter-icon', html:'×', iconSize:[50,50], iconAnchor:[25,25]}) }).addTo(lMap);
+            else latestQuakeMarker = L.marker([lat, lng], { 
+                icon: L.divIcon({className:'epicenter-icon', html:'×', iconSize:[50,50], iconAnchor:[25,25]}),
+                pane: 'epicenterPane'
+            }).addTo(lMap);
             
             let shouldHide = (isRealtimeOnlyMode && !selectedHistoryQuake) || isEEWActive;
             latestQuakeMarker.setOpacity(shouldHide ? 0 : 1);
@@ -1306,8 +1262,7 @@ function updateLeafletMap(earthquake, points, issue, skipFlyTo = false) {
     if (geojsonLayer && points) {
         const areaMax = {}; 
         
-        // --- 観測点描画の非表示条件(揺れ検知時・EEW中・リアルタイム揺れモード中) ---
-        let hideObs = isYureDetecting || isEEWActive || (isRealtimeOnlyMode && !selectedHistoryQuake);
+        let hideObs = isEEWActive || (isRealtimeOnlyMode && !selectedHistoryQuake);
 
         points.forEach(p => { 
             let areaName = p.isArea ? p.addr : null;
@@ -1334,7 +1289,6 @@ function updateLeafletMap(earthquake, points, issue, skipFlyTo = false) {
                     if (scale == 46) imgUrl = "source/" + iconTheme + "_int_.png";
 
                     let sIcon = L.icon({ iconUrl: imgUrl, iconSize: [20, 20] });
-                    // zIndexOffset を追加して、震度が大きいほど手前に表示させる
                     let marker = L.marker([stLat, stLon], { icon: sIcon, zIndexOffset: scale * 100 });
                     marker.bindPopup(p.addr + "：" + fmt.shindo(scale, earthquake?.hypocenter?.depth));
                     obsLayer.addLayer(marker);
@@ -1342,8 +1296,7 @@ function updateLeafletMap(earthquake, points, issue, skipFlyTo = false) {
             }
         });
 
-        // --- 震度速報 (ScalePrompt) 時の代表点マーカー描画処理を追加 ---
-        if (issue?.type === "ScalePrompt" && !hideObs) {
+        if ((issue?.type === "ScalePrompt" || issue?.type === "Destination") && !hideObs) {
             geojsonLayer.eachLayer(layer => {
                 const name = layer.feature.properties.name || layer.feature.properties.nam_ja || layer.feature.properties.code;
                 const scale = areaMax[name];
@@ -1354,7 +1307,6 @@ function updateLeafletMap(earthquake, points, issue, skipFlyTo = false) {
                     if (scale == 46) imgUrl = "source/" + iconTheme + "_int_.png";
                     
                     let sIcon = L.icon({ iconUrl: imgUrl, iconSize: [24, 24] });
-                    // zIndexOffset を追加して、震度が大きいほど手前に表示させる
                     let marker = L.marker([pt.lat, pt.lng], { icon: sIcon, zIndexOffset: scale * 100 });
                     marker.bindPopup(name + "：" + fmt.shindo(scale, earthquake?.hypocenter?.depth));
                     obsLayer.addLayer(marker);
@@ -1417,7 +1369,7 @@ function clearEEWDisplay(eventId = null) {
                 let shouldHide = (isRealtimeOnlyMode && !selectedHistoryQuake);
                 latestQuakeMarker.setOpacity(shouldHide ? 0 : 1);
             }
-            refreshMapDisplay(); // 終了時にマーカー等再描画
+            refreshMapDisplay(); 
         } else {
             let hasWarn = Array.from(activeEEWs.values()).some(e => e.isWarn);
             const popup = document.getElementById("eewPopup");
@@ -1469,10 +1421,9 @@ async function updateWolfxEEW(data) {
 
     isEEWActive = true; 
     if (latestQuakeMarker) latestQuakeMarker.setOpacity(0);
-    if(obsLayer) obsLayer.clearLayers(); // EEW開始時に観測点を非表示
-    if(isYureDetecting) clearYureDetection(); 
+    if(obsLayer) obsLayer.clearLayers(); 
 
-    // --- UI 即時反映 (API待機によるフリーズ回避) ---
+    // --- UI 即時反映 ---
     activeEEWs.set(id, data); 
     updateLPGMDisplay(data.Magunitude, data.Depth);
 
@@ -1490,11 +1441,19 @@ async function updateWolfxEEW(data) {
     
     const eLat = parseFloat(data.Latitude), eLng = parseFloat(data.Longitude);
     if (eLat && eLng) {
-        if (epicenterMarkers.has(id)) { epicenterMarkers.get(id).setLatLng([eLat, eLng]); } else { const m = L.marker([eLat, eLng], { icon: L.divIcon({className:'epicenter-icon', html:'×', iconSize:[60,60], iconAnchor:[30,30]}) }).addTo(lMap); epicenterMarkers.set(id, m); }
+        if (epicenterMarkers.has(id)) { 
+            epicenterMarkers.get(id).setLatLng([eLat, eLng]); 
+        } else { 
+            const m = L.marker([eLat, eLng], { 
+                icon: L.divIcon({className:'epicenter-icon', html:'×', iconSize:[60,60], iconAnchor:[30,30]}),
+                pane: 'epicenterPane'
+            }).addTo(lMap); 
+            epicenterMarkers.set(id, m); 
+        }
         if (!eewWaveTimer) drawWaves();
     }
 
-    // --- 非同期処理群 (APIリクエスト等) ---
+    // --- 非同期処理群 ---
     calculateEewOffset(data).then(async offset => {
         eewOffsets.set(id, offset);
         if(window.lastKyoshinData) renderKyoshinCanvas(window.lastKyoshinData);
@@ -1560,8 +1519,6 @@ const loadSites=async()=>{
         const items = (await r.json()).items; 
         const parseLoc=v=>typeof v==="number"?v:Number(v.replace(/[NSEW]/g,m=>({N:"+",S:"-",E:"+",W:"-"}[m])));
         sites = items.map(item => ({ lat: parseLoc(item[0]), lng: parseLoc(item[1]) }));
-        
-        for(let i=0; i<sites.length; i++) intensityHistory.push(new Array(HISTORY_LEN).fill(null));
     } catch(e) { console.error("Sitelist load error", e); }
 };
 
@@ -1574,337 +1531,11 @@ async function fetchKyoshin(){
     try{const r=await fetch(url); if(!r.ok) throw new Error(); return await r.json();}catch{offsetSec++;return null;}
 }
 
-/* ================= 揺れ検知ロジック & 震央推定 ================= */
-function getRtLevelStr(rtInt) {
-    if (rtInt >= 4.5) return "Stronger";
-    if (rtInt >= 2.5) return "Strong";
-    if (rtInt >= 0.5) return "Medium";
-    if (rtInt >= -1.0) return "Weak";
-    if (rtInt >= -1.5) return "Weaker";
-    return "None";
-}
-function levelValue(lvl) {
-    const lvls = {"None":0, "Weaker":1, "Weak":2, "Medium":3, "Strong":4, "Stronger":5};
-    return lvls[lvl] || 0;
-}
-
-function calcTravelTime(dist, depth) {
-    return Math.sqrt(dist*dist + depth*depth) / 6.5;
-}
-
-function estimateEpicenter(detectSites, nowMs) {
-    if (detectSites.length === 0) return null;
-    let firstSite = detectSites[0];
-    let minTime = siteDetectedTime.get(firstSite);
-    for(let i=1; i<detectSites.length; i++) {
-        let t = siteDetectedTime.get(detectSites[i]);
-        if(t < minTime) { minTime = t; firstSite = detectSites[i]; }
-    }
-    
-    let baseLat = Math.round(sites[firstSite].lat * 100) / 100;
-    let baseLng = Math.round(sites[firstSite].lng * 100) / 100;
-    let baseDepth = 10;
-    
-    const calcError = (lat, lng, depth) => {
-        let origins = [];
-        let firstDist = getDistance(lat, lng, sites[firstSite].lat, sites[firstSite].lng);
-        
-        for (let idx of detectSites) {
-            let d = getDistance(lat, lng, sites[idx].lat, sites[idx].lng);
-            let tt = calcTravelTime(d, depth);
-            let dt = siteDetectedTime.get(idx);
-            let origin = dt - (tt * 1000);
-            origins.push(origin);
-        }
-        let avgOrigin = origins.reduce((a,b)=>a+b, 0) / origins.length;
-        
-        let errorSum = 0;
-        for(let i=0; i<detectSites.length; i++) {
-            let idx = detectSites[i];
-            let d = getDistance(lat, lng, sites[idx].lat, sites[idx].lng);
-            let weight = (d <= 50) ? 1 : (firstDist / d);
-            let err = Math.pow(origins[i] - avgOrigin, 2);
-            errorSum += err * weight;
-        }
-        
-        let timeSinceFirst = nowMs - minTime;
-        if (timeSinceFirst <= 3000 || (timeSinceFirst <= 10000 && detectSites.length < 30)) {
-            let maxDist = 0;
-            for(let idx of detectSites) maxDist = Math.max(maxDist, getDistance(lat, lng, sites[idx].lat, sites[idx].lng));
-            
-            for(let i=0; i<sites.length; i++) {
-                if(!detectSites.includes(i)) {
-                    let d = getDistance(lat, lng, sites[i].lat, sites[i].lng);
-                    if (d <= maxDist + 30) {
-                        let tt = calcTravelTime(d, depth);
-                        let expectedReach = avgOrigin + (tt * 1000);
-                        if (expectedReach < nowMs) {
-                            errorSum += 1000000; 
-                        }
-                    }
-                }
-            }
-        }
-        return { error: errorSum, originTime: avgOrigin };
-    };
-    
-    const phases = [
-        { dLat: 0.5, dLng: 0.5, dDepth: 0 },
-        { dLat: 0.1, dLng: 0.1, dDepth: 0 },
-        { dLat: 0.1, dLng: 0.1, dDepth: 50 },
-        { dLat: 0.1, dLng: 0.1, dDepth: 10 }
-    ];
-    
-    let currentLat = baseLat;
-    let currentLng = baseLng;
-    let currentDepth = baseDepth;
-    let currentRes = calcError(currentLat, currentLng, currentDepth);
-    
-    for (let phase of phases) {
-        let improved = true;
-        while(improved) {
-            improved = false;
-            let candidates = [];
-            if(phase.dDepth === 0) {
-                candidates.push({l: currentLat+phase.dLat, g: currentLng, d: currentDepth});
-                candidates.push({l: currentLat-phase.dLat, g: currentLng, d: currentDepth});
-                candidates.push({l: currentLat, g: currentLng+phase.dLng, d: currentDepth});
-                candidates.push({l: currentLat, g: currentLng-phase.dLng, d: currentDepth});
-            } else {
-                candidates.push({l: currentLat+phase.dLat, g: currentLng, d: currentDepth});
-                candidates.push({l: currentLat-phase.dLat, g: currentLng, d: currentDepth});
-                candidates.push({l: currentLat, g: currentLng+phase.dLng, d: currentDepth});
-                candidates.push({l: currentLat, g: currentLng-phase.dLng, d: currentDepth});
-                candidates.push({l: currentLat, g: currentLng, d: Math.max(0, currentDepth+phase.dDepth)});
-                candidates.push({l: currentLat, g: currentLng, d: Math.max(0, currentDepth-phase.dDepth)});
-            }
-            
-            for(let c of candidates) {
-                let res = calcError(c.l, c.g, c.d);
-                if (res.error < currentRes.error) {
-                    currentLat = c.l; currentLng = c.g; currentDepth = c.d; currentRes = res;
-                    improved = true;
-                }
-            }
-        }
-    }
-    return { lat: currentLat, lng: currentLng, depth: currentDepth, originTime: currentRes.originTime };
-}
-
-
-function processYureDetection(intens) {
-    const now = Date.now();
-    let currentHighPoints = [];
-    let detectedThisTick = [];
-    
-    for(let i=0; i<sites.length; i++) {
-        let raw = intens[i];
-        let rtInt = null;
-        if(raw !== undefined && raw !== null) {
-            let code = isDebugNankai ? raw + 100 : String(raw).charCodeAt(0);
-            if(!isNaN(code)) rtInt = (code - 100) / 10 - 3; 
-        }
-        
-        intensityHistory[i][historyIndex] = rtInt;
-        if (rtInt === null) continue;
-        
-        let maxChange = 0;
-        let validHistCount = 0;
-        for(let h=0; h<HISTORY_LEN; h++) {
-            if(intensityHistory[i][h] !== null) {
-                validHistCount++;
-                maxChange = Math.max(maxChange, Math.abs(rtInt - intensityHistory[i][h]));
-            }
-        }
-        let isIsolated = true; 
-        for(let j=0; j<sites.length; j++){
-            if(i!==j && getDistance(sites[i].lat, sites[i].lng, sites[j].lat, sites[j].lng) <= 50) { isIsolated = false; break; }
-        }
-        
-        let excluded = false;
-        if (!isYureDetecting && validHistCount > 0) {
-            if (maxChange < 1.0) {
-                if ((!isIsolated && rtInt >= 2.5) || (isIsolated && rtInt >= 4.5)) {
-                    excluded = true;
-                }
-            }
-        }
-
-        pastEpicenters = pastEpicenters.filter(ep => now < ep.expireAt);
-
-        if (!excluded && validHistCount > 0) {
-            let currentLvlStr = getRtLevelStr(rtInt);
-            let prevLvlStr = siteDetectedLevel.get(i) || "None";
-            
-            if (levelValue(currentLvlStr) > levelValue(prevLvlStr)) {
-                let isWaveTailOrNoise = false;
-                
-                if (!isYureDetecting) {
-                    for (let ep of pastEpicenters) {
-                        let dist = getDistance(sites[i].lat, sites[i].lng, ep.lat, ep.lng);
-                        let dist3D = Math.sqrt(dist*dist + ep.depth*ep.depth);
-                        let elapsedSec = (now - ep.originTime) / 1000;
-                        let maxReach = elapsedSec * 6.5 + 50; 
-                        if (elapsedSec > 0 && dist3D <= maxReach) { isWaveTailOrNoise = true; break; }
-                    }
-                } else if (calculatedEpicenter) {
-                    let ep = calculatedEpicenter;
-                    let dist = getDistance(sites[i].lat, sites[i].lng, ep.lat, ep.lng);
-                    let dist3D = Math.sqrt(dist*dist + ep.depth*ep.depth);
-                    let elapsedSec = (now - ep.originTime) / 1000;
-                    let maxReach = elapsedSec * 6.5 + 100; 
-                    if (elapsedSec > 0 && dist3D > maxReach) { isWaveTailOrNoise = true; }
-                }
-                
-                if (isWaveTailOrNoise) { excluded = true; }
-            }
-        }
-
-        if(!excluded) {
-            let currentLvlStr = getRtLevelStr(rtInt);
-            let prevLvlStr = siteDetectedLevel.get(i) || "None";
-            
-            if (levelValue(currentLvlStr) > levelValue(prevLvlStr)) {
-                let neighborUp = false;
-                for(let j=0; j<sites.length; j++) {
-                    if (i===j) continue;
-                    let d = getDistance(sites[i].lat, sites[i].lng, sites[j].lat, sites[j].lng);
-                    if (d <= 50) {
-                        let jLvl = getRtLevelStr(intensityHistory[j][historyIndex] || -99);
-                        if (levelValue(jLvl) > 0) { neighborUp = true; break; }
-                    }
-                }
-                
-                if (isIsolated || neighborUp) {
-                    siteDetectedLevel.set(i, currentLvlStr);
-                    if(!siteDetectedTime.has(i)) siteDetectedTime.set(i, now);
-                    detectedThisTick.push(i);
-                }
-            }
-        }
-        
-        if (siteDetectedLevel.has(i) && levelValue(siteDetectedLevel.get(i)) > 0) {
-            currentHighPoints.push(i);
-        }
-    }
-    
-    historyIndex = (historyIndex + 1) % HISTORY_LEN;
-
-    if(isEEWActive) {
-        if(isYureDetecting) clearYureDetection();
-        return;
-    }
-
-    if (!isYureDetecting) {
-        if (currentHighPoints.length >= 4) {
-            isYureDetecting = true; isRealtimeOnlyMode = true;
-            document.getElementById('btnRealtimeMode').classList.add('active'); document.getElementById('btnNormalMode').classList.remove('active');
-            if(obsLayer) obsLayer.clearLayers(); 
-            lastYureDetectTime = now;
-            
-            if (userSettings.enableEpicenterEstimate) {
-                calculatedEpicenter = estimateEpicenter(currentHighPoints, now);
-                if (calculatedEpicenter) {
-                    lMap.flyTo([calculatedEpicenter.lat, calculatedEpicenter.lng], 7, { duration: 1.0 });
-                    if(!yureEpicenterMarker) {
-                        yureEpicenterMarker = L.marker([calculatedEpicenter.lat, calculatedEpicenter.lng], { 
-                            icon: L.divIcon({ className: 'epicenter-icon', html: '<div style="color:#00ffff;text-shadow:0 0 8px #00f;font-size:40px;font-weight:bold;">＋</div>', iconSize: [40,40], iconAnchor: [20,20] }), pane: 'wavePane'
-                        }).addTo(lMap);
-                    } else {
-                        yureEpicenterMarker.setLatLng([calculatedEpicenter.lat, calculatedEpicenter.lng]);
-                    }
-                }
-            }
-            if(now - yureBeepInterval > 1000) { playYureBeep(); yureBeepInterval = now; }
-        }
-    } else {
-        if (detectedThisTick.length > 0) {
-            lastYureDetectTime = now;
-            if (userSettings.enableEpicenterEstimate) {
-                calculatedEpicenter = estimateEpicenter(currentHighPoints, now);
-                if (calculatedEpicenter && yureEpicenterMarker) {
-                    yureEpicenterMarker.setLatLng([calculatedEpicenter.lat, calculatedEpicenter.lng]);
-                }
-            }
-        }
-        
-        if (now - lastYureDetectTime > 15000) {
-            clearYureDetection();
-            isRealtimeOnlyMode = false;
-            document.getElementById('btnNormalMode').classList.add('active'); document.getElementById('btnRealtimeMode').classList.remove('active');
-            refreshMapDisplay();
-        } else {
-            if (currentHighPoints.length >= 4 && now - yureBeepInterval > 1000) {
-                 playYureBeep(); yureBeepInterval = now;
-            }
-        }
-    }
-
-    if (isYureDetecting) {
-        const GRID_SIZE = 0.25; 
-        let currentGrids = new Map();
-        for (let id of currentHighPoints) {
-            let lvlStr = siteDetectedLevel.get(id);
-            let lvVal = levelValue(lvlStr);
-            if (lvVal === 0) continue; 
-            let lat = sites[id].lat; let lng = sites[id].lng;
-            let latIdx = Math.floor(lat / GRID_SIZE); let lngIdx = Math.floor(lng / GRID_SIZE);
-            let key = `${latIdx}_${lngIdx}`;
-            if(!currentGrids.has(key)) currentGrids.set(key, lvVal);
-            else currentGrids.set(key, Math.max(currentGrids.get(key), lvVal));
-        }
-        updateYureGrids(currentGrids, GRID_SIZE);
-    }
-}
-
-function updateYureGrids(activeGrids, gridSize) {
-    if(!yureGridLayer) yureGridLayer = L.layerGroup().addTo(lMap);
-    yureGridLayer.clearLayers();
-    
-    activeGrids.forEach((maxLv, key) => {
-        let [latIdx, lngIdx] = key.split('_').map(Number);
-        let sLat = latIdx * gridSize; let sLng = lngIdx * gridSize;
-        let nLat = sLat + gridSize; let nLng = sLng + gridSize;
-        
-        let colorHex = "#00ffff";
-        if(maxLv===1) colorHex = "#0000ff";
-        else if(maxLv===2) colorHex = "#00ff00";
-        else if(maxLv===3) colorHex = "#ffff00";
-        else if(maxLv===4) colorHex = "#ff8800";
-        else if(maxLv===5) colorHex = "#ff0000";
-        
-        let rect = L.rectangle([[sLat, sLng], [nLat, nLng]], {
-            color: colorHex, weight: 2, fillColor: "transparent", fillOpacity: 0, pane: 'yurePane'
-        });
-        yureGridLayer.addLayer(rect);
-    });
-}
-
-function clearYureDetection() {
-    if (calculatedEpicenter) {
-        pastEpicenters.push({
-            lat: calculatedEpicenter.lat,
-            lng: calculatedEpicenter.lng,
-            depth: calculatedEpicenter.depth,
-            originTime: calculatedEpicenter.originTime,
-            expireAt: Date.now() + (3 * 60 * 1000) 
-        });
-    }
-
-    isYureDetecting = false;
-    siteDetectedLevel.clear();
-    siteDetectedTime.clear();
-    calculatedEpicenter = null;
-    if(yureGridLayer) yureGridLayer.clearLayers();
-    if(yureEpicenterMarker) { lMap.removeLayer(yureEpicenterMarker); yureEpicenterMarker = null; }
-}
-
 window.lastKyoshinData = null;
 function drawKyoshin(d){
     if(!d?.realTimeData) return; 
     window.lastKyoshinData = d;
     renderKyoshinCanvas(d);
-    processYureDetection(d.realTimeData.intensity);
 }
 
 function renderKyoshinCanvas(d) {
@@ -1925,7 +1556,7 @@ function renderKyoshinCanvas(d) {
         if(!colorStr) continue;
 
         let alpha = 1.0;
-        if (!isEEWActive && !isYureDetecting) {
+        if (!isEEWActive) {
             if (isRealtimeOnlyMode) alpha = 1.0;
             else { alpha = Math.max(0.05, Math.min(1.0, lv / 8)); if (alpha < 0.1) continue; }
         }
@@ -2023,9 +1654,23 @@ async function loadQuakes(){
         const res=await fetch("https://api.p2pquake.net/v2/history?codes=551&codes=552&limit=30");
         const fullList=await res.json(); if(!fullList?.length)return;
         window.latestFullQuakeList = fullList;
-        const list = fullList.filter(x => !(x.code === 551 && x.earthquake.hypocenter.magnitude === -1));
-        const latestEQ = list.find(x => x.code === 551), tsunamiData = fullList.find(x => x.code === 552);
+        
+        // 震度速報(ScalePrompt)も含めてパースする
+        const list = fullList.filter(x => x.code === 551);
+        const tsunamiData = fullList.find(x => x.code === 552);
         updateCommentDisplay(fullList);
+
+        let latestEQ = list[0];
+        // もし最新がDestinationなら、同時間のScalePromptを探してポイント・最大震度を引き継ぐ
+        if (latestEQ && latestEQ.issue && latestEQ.issue.type === "Destination") {
+            const relatedPrompt = list.find(x => x.issue && x.issue.type === "ScalePrompt" && x.earthquake.time === latestEQ.earthquake.time);
+            if (relatedPrompt) {
+                latestEQ.points = relatedPrompt.points;
+                if (latestEQ.earthquake.maxScale === -1) {
+                    latestEQ.earthquake.maxScale = relatedPrompt.earthquake.maxScale;
+                }
+            }
+        }
         
         let playUpdateApi = false; let playTsunami = false;
         if (latestEQ && latestEQ.earthquake.time !== lastEqTime) {
@@ -2035,7 +1680,16 @@ async function loadQuakes(){
                 const s = fmt.shindo(latestEQ.earthquake.maxScale, latestEQ.earthquake.hypocenter.depth);
                 const depth = latestEQ.earthquake.hypocenter.depth;
                 const depthStr = depth === 0 ? "ごく浅い" : (depth === -1 ? "不明" : depth + "キロ");
-                speakText(`${latestEQ.earthquake.hypocenter.name}で地震が発生。最大震度は${s}。マグニチュードは${latestEQ.earthquake.hypocenter.magnitude}。深さは、${depthStr}、です。`);
+                
+                let speechText = "";
+                if (latestEQ.issue.type === "ScalePrompt") {
+                    speechText = `震度速報です。最大震度${s.replace("強", "きょう").replace("弱", "じゃく")}を観測する地震がありました。今後の情報に注意してください。`;
+                } else if (latestEQ.issue.type === "Destination") {
+                    speechText = `震源に関する情報です。震央は${latestEQ.earthquake.hypocenter.name}、マグニチュードは${latestEQ.earthquake.hypocenter.magnitude}、深さは${depthStr}、です。`;
+                } else {
+                    speechText = `${latestEQ.earthquake.hypocenter.name}で地震が発生。最大震度は${s.replace("強", "きょう").replace("弱", "じゃく")}。マグニチュードは${latestEQ.earthquake.hypocenter.magnitude}。深さは、${depthStr}、です。`;
+                }
+                speakText(speechText);
             }
         }
         if (tsunamiData && !isInitialLoad) {
@@ -2054,6 +1708,7 @@ async function loadQuakes(){
             if(latest) {
                 let latestTitleName = latestEQ.earthquake.hypocenter.name;
                 if (latestEQ.issue && latestEQ.issue.type === "ScalePrompt") latestTitleName = "[震度速報]";
+                else if (latestEQ.issue && latestEQ.issue.type === "Destination") latestTitleName = "[震源情報] " + latestEQ.earthquake.hypocenter.name;
 
                 const e0=latestEQ.earthquake, s0=fmt.shindo(e0.maxScale, e0.hypocenter.depth), scBg=scaleColor(s0);
                 const checkingTag = e0.domesticTsunami === "Checking" ? `<span class="tag-checking">調査中</span>` : "";
@@ -2071,11 +1726,18 @@ async function loadQuakes(){
                         </div>
                     </div>`;
             }
-            if (!selectedHistoryQuake && !isYureDetecting) updateLeafletMap(latestEQ.earthquake, latestEQ.points, latestEQ.issue);
+            if (!selectedHistoryQuake) updateLeafletMap(latestEQ.earthquake, latestEQ.points, latestEQ.issue);
             updateLPGMDisplay(latestEQ.earthquake.hypocenter.magnitude, latestEQ.earthquake.hypocenter.depth);
         }
         updateTsunamiDisplay(tsunamiData, latestEQ?.earthquake);
-        currentQuakeList = list.filter(x => x.code === 551 && x.earthquake.maxScale !== -1 && x.earthquake.maxScale !== "-1").slice(0, 6);
+
+        // 履歴ウィンドウからは ScalePrompt, Destination, 震度不明の情報を除外
+        currentQuakeList = list.filter(x => 
+            x.issue && x.issue.type !== "ScalePrompt" && 
+            x.issue.type !== "Destination" && 
+            x.earthquake.maxScale !== -1 && 
+            x.earthquake.maxScale !== "-1"
+        ).slice(0, 6);
         renderHistoryPanel(); isInitialLoad = false;
     } catch(e){ console.error(e); }
 }
