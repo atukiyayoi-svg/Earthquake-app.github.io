@@ -1073,14 +1073,14 @@ const scaleColor = s => {
   if (code.includes("6弱")) return "#fa0000"; 
   if (code.includes("6強")) return "#a00000";
   if (code === "7") return "#960096"; 
-  return "#222";
+  return "#aaaaaa"; // 震度不明時のカラーを明るい灰色に変更
 };
 const magColor = m => m >= 7.5 ? "#ff0000" : m >= 6.0 ? "#ff5500" : m >= 4.0 ? "#ffff00" : "#00ced1";
 const depthColor = d => {
     if (d === -1 || d === null) return "#444"; if (d === 0) return "#ff0000"; if (d < 30) return "#ff4500"; if (d < 70) return "#ffa500"; if (d < 150) return "#1e90ff"; return "#00008b";               
 };
 const getContrastColor = hex => {
- if(!hex || hex === "#222") return "#fff";
+ if(!hex || hex === "#222" || hex === "#aaaaaa") return "#fff";
  try {
     const c = hex.replace("#",""); if (c.length !== 6) return "#fff";
     const r = parseInt(c.substr(0,2),16), g = parseInt(c.substr(2,2),16), b = parseInt(c.substr(4,2),16);
@@ -1813,12 +1813,18 @@ async function loadQuakes(){
 
         let latestEQ = list[0];
         // もし最新がDestinationなら、同時間のScalePromptを探してポイント・最大震度を引き継ぐ
+        // または、現在表示中のものが同じ地震ならそれを引き継ぐ（震度速報時のマップ上画を維持する）
         if (latestEQ && latestEQ.issue && latestEQ.issue.type === "Destination") {
             const relatedPrompt = list.find(x => x.issue && x.issue.type === "ScalePrompt" && x.earthquake.time === latestEQ.earthquake.time);
             if (relatedPrompt) {
                 latestEQ.points = relatedPrompt.points;
                 if (latestEQ.earthquake.maxScale === -1) {
                     latestEQ.earthquake.maxScale = relatedPrompt.earthquake.maxScale;
+                }
+            } else if (window.currentEarthquakeData && window.currentEarthquakeData.time === latestEQ.earthquake.time) {
+                latestEQ.points = window.currentEarthquakePoints;
+                if (latestEQ.earthquake.maxScale === -1) {
+                    latestEQ.earthquake.maxScale = window.currentEarthquakeData.maxScale;
                 }
             }
         }
