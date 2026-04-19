@@ -146,7 +146,7 @@
 
 <div class="container">
     <h1>EPICA 仕様書及び取扱説明書</h1>
-    <p style="text-align: center;">バージョン: V4.2.0</p>
+    <p style="text-align: center;">バージョン: <span id="ver-text">V4.2.0</span></p>
 
     <section>
         <h2>1. アプリケーションの使い方</h2>
@@ -237,6 +237,18 @@
             <p>取得している各種地震・気象データ、GeoJSONポリゴンデータ、およびJ-SHISの地盤データ等は、各配信元・作成元の利用規約および著作権に帰属します。データの利用に関しては各サービスのオープンデータ利用規約に従ってください。</p>
         </div>
     </section>
+
+    <script>
+    // 仕様書内のバージョン表記を最新の状態に更新する
+    fetch('version.json')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('ver-text').innerText = "V" + data.version;
+        })
+        .catch(() => {
+            // ローカル実行時などで取得できない場合は既存のテキストを維持
+        });
+　　</script>
 
 </div>
 
