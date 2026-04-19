@@ -1512,7 +1512,7 @@ async function updateWolfxEEW(data) {
     let card = document.getElementById(id); if (!card && container) { card = document.createElement("div"); card.id = id; container.prepend(card); }
     if(card) {
         card.classList.add("active"); const isWarn = data.isWarn; card.className = "eewCard active" + (isWarn ? " warning" : "");
-        const maxShindoStr = data.MaxIntensity || "0"; const scCol = scaleColor(maxShindoStr);
+        const maxShindoStr = data.MaxIntensity || "0"; const scCol = scaleColor(maxShindoStr); const scTextCol = getContrastColor(scCol);
         const eewFontSize = maxShindoStr.length > 1 ? (maxShindoStr === "不明" ? "24px" : "40px") : "48px";
         let tagsHTML = ""; if (data.isTraining) tagsHTML += `<span class="tag" style="background:#800080; color:#fff;">訓練報</span>`; if (data.isAssumption) tagsHTML += `<span class="tag" style="background:#000080; color:#fff;">PLUM法</span>`;
         
@@ -1528,7 +1528,7 @@ async function updateWolfxEEW(data) {
             areasHTML = `<div class="eewAreas">【予測地域】<br>${data.WarnArea.Chiiki}</div>`;
         }
 
-        card.innerHTML = `<div class="eewHeader"><span style="display:flex; align-items:center;">${tagsHTML}${data.Title} 第${data.Serial}${data.isFinal ? '(最終)' : ''}報</span><span>${data.AnnouncedTime.slice(11,19)}</span></div><div class="eewBody"><div class="eewScaleBox" style="color:${scCol}; border-color:${scCol}; font-size:${eewFontSize};">${maxShindoStr}</div><div class="eewInfoBox"><div class="eewEpicenter">${data.Hypocenter}</div><div class="eewSubInfo"><span>M${data.Magunitude}</span><span>${fmt.depth(data.Depth)}</span></div></div></div>${areasHTML}`;
+        card.innerHTML = `<div class="eewHeader"><span style="display:flex; align-items:center;">${tagsHTML}${data.Title} 第${data.Serial}${data.isFinal ? '(最終)' : ''}報</span><span>${data.AnnouncedTime.slice(11,19)}</span></div><div class="eewBody"><div class="eewScaleBox" style="background:${scCol}; color:${scTextCol}; border-color:${scCol}; font-size:${eewFontSize};">${maxShindoStr}</div><div class="eewInfoBox"><div class="eewEpicenter">${data.Hypocenter}</div><div class="eewSubInfo"><span>M${data.Magunitude}</span><span>${fmt.depth(data.Depth)}</span></div></div></div>${areasHTML}`;
     }
     
     const popup = document.getElementById("eewPopup");
@@ -2081,7 +2081,7 @@ function renderAxisPanel(areaId, historyArray) {
             <div class="info-text">${item.text}</div>
         </div>
     `).join("");
-    updatePanelScroll(areaId, html);
+    updatePanelScroll(areaId, historyArray);
 }
 
 function updatePanelScroll(areaId, html) {
