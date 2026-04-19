@@ -1,0 +1,48 @@
+name: Auto Version Increment
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'version.json' # version.json自体の変更ではループ防止のため実行しない
+      - '.github/workflows/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 書き込み権限を付与
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Increment version
+        id: increment
+        run: |
+          # version.jsonから現在のバージョンを取得
+          CURRENT_VERSION=$(jq -r '.version' version.json)
+          
+          # バージョンを分解 (例: 4.2.0 -> 4, 2, 0)
+          IFS='.' read -r major minor patch <<< "$CURRENT_VERSION"
+          
+          # パッチバージョンを1加算 (例: 4.2.0 -> 4.2.1)
+          NEW_PATCH=$((patch + 1))
+          NEW_VERSION="$major.$minor.$NEW_PATCH"
+          
+          # version.jsonを更新
+          echo "{\"version\": \"$NEW_VERSION\"}" > version.json
+          
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "Updating version from $CURRENT_VERSION to $NEW_VERSION"
+
+      - name: Commit and Push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add version.json
+          git commit -m "chore: bump version to V${{ steps.increment.outputs.new_version }} [skip ci]"
+          git push
