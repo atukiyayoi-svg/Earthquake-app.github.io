@@ -367,7 +367,7 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
         <div id="startupStatus">システム初期化中...</div>
         <div id="startupReady" style="display: none;">
             <div class="app-title">EPICA</div>
-            <div class="app-version">V4.2.0</div>
+            <div class="app-version">V<span id="startup-version">4.2.0</span></div>
             <div class="btn-group">
                 <button id="btnStart" class="startup-btn">開始</button>
                 <button id="btnSiyou" class="startup-btn">仕様確認</button>
@@ -2057,8 +2057,41 @@ function showStartupReady() {
     document.getElementById("startupReady").style.display = "block";
 }
 
+/* --- アップデートチェック設定 --- */
+const CURRENT_VERSION = "4.2.0"; // 現在のコードのバージョン
+// 自分のGitHubリポジトリのRAW URL
+const VERSION_CHECK_URL = "https://raw.githubusercontent.com/atukiyayoi-svg/EPICA/refs/heads/main/version.json";
+
+async function checkSystemUpdate() {
+    try {
+        const response = await fetch(`${VERSION_CHECK_URL}?t=${Date.now()}`); // キャッシュ回避
+        if (!response.ok) return;
+        
+        const data = await response.json();
+        const latestVersion = data.version;
+
+        // 1. 起動画面のバージョン表記をGitHub上の最新版(latestVersion)に書き換える
+        const startupVersionElement = document.getElementById('startup-version');
+        if (startupVersionElement) {
+            startupVersionElement.innerText = latestVersion;
+        }
+
+        // 2. ローカルのバージョンと異なる場合のみアップデート確認を出す
+        if (latestVersion !== CURRENT_VERSION) {
+            if (confirm(`新しいバージョン（V${latestVersion}）が利用可能です。\nアップデートして再読み込みしますか？`)) {
+                window.location.reload(true);
+            }
+        }
+    } catch (e) { 
+        console.warn("Update check failed", e); 
+    }
+}
+
 async function startApp() {
     try {
+    // 1. 最初にアップデートをチェック
+        await checkSystemUpdate();
+
         updateStartupStatus("観測点データ読み込み中...");
         await loadSites();
         
