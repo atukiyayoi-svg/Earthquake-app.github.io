@@ -212,7 +212,19 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 }
 #quakePanel::-webkit-scrollbar { width: 6px; }
 #quakePanel::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
-.qItem{display:flex;margin-bottom:8px;background:rgba(25,25,25,0.95); border:1px solid rgba(255,255,255,.3);border-radius:0;overflow:hidden;backdrop-filter:blur(5px); cursor:pointer; transition: all 0.2s;}
+.qItem {
+    display:flex;
+    margin-bottom:8px;
+    background:rgba(25,25,25,0.95); 
+    border:1px solid rgba(255,255,255,.3);
+    border-radius:0;
+    overflow:hidden;
+    backdrop-filter:blur(5px); 
+    cursor:pointer; 
+    transition: all 0.2s;
+    height: 75px;        /* アイテムの高さを固定 */
+    flex-shrink: 0;      /* アイテムが潰れるのを防ぐ */
+}
 .qItem:hover { background:rgba(50,50,50,0.95); }
 .qItem.selected { border: 2px solid #00ffcc; box-shadow: 0 0 10px rgba(0,255,204,0.5); transform: scale(1.02); margin-left: -5px; }
 .scaleBox{width:75px;display:flex;align-items:center;justify-content:center; font-size:32px;font-weight:900;flex-shrink:0}
@@ -1417,11 +1429,15 @@ function clearEEWDisplay(eventId = null) {
 async function updateWolfxEEW(data) {
     if (data.type !== "jma_eew") return;
     const container = document.getElementById("eewContainer"); const id = data.EventID || "wolfx-temp";
+    
     if (data.OriginalText) {
-        const expiry = Date.now() + 3600 * 1000; const existing = window.eewOriginalTextList.find(x => x.id === id);
-        if (existing) { existing.text = data.OriginalText; existing.expiry = expiry; } else { window.eewOriginalTextList.push({ id: id, text: data.OriginalText, expiry: expiry }); }
+        const expiry = Date.now() + 3600 * 1000; 
+        const existing = window.eewOriginalTextList.find(x => x.id === id);
+        if (existing) { existing.text = data.OriginalText; existing.expiry = expiry; } 
+        else { window.eewOriginalTextList.push({ id: id, text: data.OriginalText, expiry: expiry }); }
         updateCommentDisplay(window.latestFullQuakeList);
     }
+    
     let isNewEew = !activeEEWs.has(id); let prevData = activeEEWs.get(id);
 
     if (data.isCancel) {
@@ -1693,11 +1709,33 @@ function updateTsunamiDisplay(data, eqData) {
 }
 
 function updateCommentDisplay(fullList) {
-    const area = document.getElementById("commentScrollArea"); if(!area) return; let html = "";
+    const area = document.getElementById("commentScrollArea"); if(!area) return; 
+    let html = "";
+    
+    // EEWの自由付随コメント(OriginalText)を優先または追加表示
+    if (window.eewOriginalTextList && window.eewOriginalTextList.length > 0) {
+        window.eewOriginalTextList.forEach(item => {
+            if (item.text) {
+                html += `<div class="commentBody" style="color: #ffaa00; font-weight: bold;">【緊急地震速報】\n${item.text}</div>`;
+            }
+        });
+    }
+
+    // 地震情報の自由付随コメント
     const commentData = fullList?.find(x => x.code === 551 && x.comments?.freeFormComment);
-    if (commentData && commentData.comments.freeFormComment) { html += `<div class="commentBody">${commentData.comments.freeFormComment}</div>`; }
-    if (html === "") { area.innerHTML = '<div class="noComment">付随コメントなし。</div>'; area.style.opacity = 1; } 
-    else { area.innerHTML = html; area.scrollTop = 0; startAutoScroll("commentScrollArea"); }
+    if (commentData && commentData.comments.freeFormComment) { 
+        html += `<div class="commentBody">${commentData.comments.freeFormComment}</div>`; 
+    }
+    
+    if (html === "") { 
+        area.innerHTML = '<div class="noComment">付随コメントなし。</div>'; 
+        area.style.opacity = 1; 
+    } 
+    else { 
+        area.innerHTML = html; 
+        area.scrollTop = 0; 
+        startAutoScroll("commentScrollArea"); 
+    }
 }
 
 let isInitialLoad = true, lastEqTime = null, lastTsunamiIssueTime = null;
@@ -1950,7 +1988,10 @@ function updatePanelScroll(areaId, html) {
 function convertAxisEewToWolfx(msg) {
     if (!msg || !msg.Title) return null;
     let lat = 0, lng = 0;
-    if (msg.Hypocenter && msg.Hypocenter.Coordinate) { lng = msg.Hypocenter.Coordinate[0]; lat = msg.Hypocenter.Coordinate[1]; }
+    if (msg.Hypocenter && msg.Hypocenter.Coordinate) { 
+        lng = msg.Hypocenter.Coordinate[0]; 
+        lat = msg.Hypocenter.Coordinate[1]; 
+    }
     
     let depthStr = msg.Hypocenter?.Depth || "10km";
     let depthNum = parseInt(depthStr.replace(/\D/g, '')) || 10;
@@ -1985,7 +2026,7 @@ function convertAxisEewToWolfx(msg) {
         "Serial": String(msg.Serial || 1),
         "isFinal": msg.Flag?.is_final || false,
         "isCancel": msg.Flag?.is_cancel || false,
-        "isWarn": msg.Title.includes("警報"),
+        "isWarn": msg.Title ? msg.Title.includes("警報") : false,
         "isTraining": msg.Flag?.is_training || false,
         "isAssumption": false,
         "isSea": false,
