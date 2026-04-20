@@ -1718,7 +1718,8 @@ function drawKyoshin(d){
 let isShakeDetectActive = false;
 let preShakeDetectMode = false;
 let shakeDetectCooldown = null;
-let shakeDetectFirstSite = null; // ★追加：最初に検知した観測点を保持
+let shakeDetectFirstSite = null; 
+let previousShakeDetectSites = new Map();
 
 function handleShakeDetection(activeSites) {
     shakeDetectLayer.clearLayers();
@@ -1744,9 +1745,6 @@ function handleShakeDetection(activeSites) {
 
         if (!isShakeDetectActive) {
             isShakeDetectActive = true;
-            // ★追加: 最初に検知した際、最も揺れが強い観測点を基準点として記録
-            shakeDetectFirstSite = validSites.reduce((max, site) => site.lv > max.lv ? site : max, validSites[0]);
-
             preShakeDetectMode = isRealtimeOnlyMode;
             if (!isRealtimeOnlyMode) {
                 setTimeout(() => {
@@ -1758,6 +1756,48 @@ function handleShakeDetection(activeSites) {
             }
             playPippiBeep();
         }
+
+        let currentMaxLv = -1;
+        let currentMaxSites = [];
+
+        validSites.forEach(s => {
+            if (s.lv > currentMaxLv) {
+                currentMaxLv = s.lv;
+                currentMaxSites = [s];
+            } else if (s.lv === currentMaxLv) {
+                currentMaxSites.push(s);
+            }
+        });
+
+        let targetSite = null;
+        if (currentMaxSites.length > 0) {
+            let newestSites = currentMaxSites.filter(s => {
+                let key = `${s.lat}_${s.lng}`;
+                let prevLv = previousShakeDetectSites.get(key);
+                return prevLv === undefined || s.lv > prevLv;
+            });
+
+            if (newestSites.length > 0) {
+                targetSite = newestSites[0];
+            } else {
+                targetSite = currentMaxSites[0];
+            }
+        }
+
+        if (targetSite) {
+            let key = `${targetSite.lat}_${targetSite.lng}`;
+            let currentTargetKey = shakeDetectFirstSite ? `${shakeDetectFirstSite.lat}_${shakeDetectFirstSite.lng}` : null;
+            
+            if (!shakeDetectFirstSite || targetSite.lv > shakeDetectFirstSite.lv || key !== currentTargetKey) {
+                shakeDetectFirstSite = targetSite;
+                lMap.flyTo([targetSite.lat, targetSite.lng], 8, { duration: 1.5 });
+            }
+        }
+
+        previousShakeDetectSites.clear();
+        validSites.forEach(s => {
+            previousShakeDetectSites.set(`${s.lat}_${s.lng}`, s.lv);
+        });
 
         let grid = {};
         let gridSize = 0.2; 
@@ -1787,11 +1827,6 @@ function handleShakeDetection(activeSites) {
             shakeDetectLayer.addLayer(rect);
         });
 
-        // ★変更: 従来の flyToBounds を廃止し、記録した最初に検知した観測点へ flyTo
-        if (shakeDetectFirstSite) {
-            lMap.flyTo([shakeDetectFirstSite.lat, shakeDetectFirstSite.lng], 8, { duration: 1.5 });
-        }
-
         let regionsStr = Array.from(detectedRegions).join("、 ");
         let sdPanel = document.getElementById('shakeDetectPanel');
         if (sdPanel) sdPanel.style.display = 'block';
@@ -1808,7 +1843,8 @@ function handleShakeDetection(activeSites) {
             if (!shakeDetectCooldown) {
                 shakeDetectCooldown = setTimeout(() => {
                     isShakeDetectActive = false;
-                    shakeDetectFirstSite = null; // ★追加: 変数をリセット
+                    shakeDetectFirstSite = null;
+                    previousShakeDetectSites.clear(); 
                     if (!preShakeDetectMode && isRealtimeOnlyMode) {
                         setTimeout(() => {
                             isRealtimeOnlyMode = false;
@@ -1949,9 +1985,43 @@ function updateTsunamiDisplay(data, eqData) {
     
     area.innerHTML = "";
     const gradeMap = { "MajorWarning": { name: "大津波警報", color: "#aa00aa" }, "MajorTsunami": { name: "大津波警報", color: "#aa00aa" }, "Warning": { name: "津波警報", color: "#ff0000" }, "TsunamiWarning": { name: "津波警報", color: "#ff0000" }, "Watch": { name: "津波注意報", color: "#ffff00" }, "TsunamiAdvisory": { name: "津波注意報", color: "#ffff00" }, "Unknown": { name: "津波予報", color: "#ffffff" } };
+    
     data.areas.forEach(a => {
         const info = gradeMap[a.grade] || { name: "津波情報", color: "#555" };
-        const timeStr = a.immediate ? "まもなく到達" : (a.firstHeight?.arrivalTime || a.firstHeight?.condition || "到達予想不明");
+        let timeStr = "";
+        
+        if (a.immediate) {
+            timeStr = "まもなく到達";
+        } else if (a.firstHeight?.arrivalTime) {
+            const arrTime = new Date(a.firstHeight.arrivalTime);
+            if (!isNaN(arrTime.getTime())) {
+                const now = new Date();
+                const diffMs = arrTime - now;
+                const diffMin = Math.floor(diffMs / 60000);
+                
+                const hh = String(arrTime.getHours()).padStart(2, '0');
+                const mm = String(arrTime.getMinutes()).padStart(2, '0');
+                const baseTimeStr = `${hh}:${mm}`;
+                
+                if (diffMin < 0) {
+                    timeStr = `${baseTimeStr} (到達済みと推測)`;
+                } else if (diffMin === 0) {
+                    timeStr = `${baseTimeStr} (まもなく到達)`;
+                } else {
+                    const h = Math.floor(diffMin / 60);
+                    const m = diffMin % 60;
+                    const remainStr = h > 0 ? `あと約${h}時間${m}分` : `あと約${m}分`;
+                    timeStr = `${baseTimeStr} (${remainStr})`;
+                }
+            } else {
+                timeStr = a.firstHeight.arrivalTime;
+            }
+        } else if (a.firstHeight?.condition) {
+            timeStr = a.firstHeight.condition;
+        } else {
+            timeStr = "到達予想不明";
+        }
+        
         const heightStr = a.maxHeight?.description || (a.maxHeight?.value ? a.maxHeight.value + 'm' : '--');
         area.innerHTML += `<div class="tsunamiItem"><div class="tsunamiGrade" style="background:${info.color}; color:${getContrastColor(info.color)}">${info.name}</div><div class="tsunamiInfo">${a.name}<br><small>${timeStr} / ${heightStr}</small></div></div>`;
     });
