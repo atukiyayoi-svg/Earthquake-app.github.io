@@ -1970,26 +1970,6 @@ function connectP2P() {
     p2p.onclose = () => { setTimeout(connectP2P, 5000); };
 }
 
-// --- 安全にテキストを抽出するヘルパー関数 (オブジェクトによる[object Object]対策) ---
-function safeExtractText(data) {
-    if (data === null || data === undefined) return "";
-    if (typeof data === "string") return data;
-    if (Array.isArray(data)) {
-        return data.map(safeExtractText).filter(s => s !== "").join("<br>");
-    }
-    if (typeof data === "object") {
-        // XMLから変換された特有のプロパティを優先して探索
-        if (data.valueOf_ !== undefined) return safeExtractText(data.valueOf_);
-        if (data.Text !== undefined) return safeExtractText(data.Text);
-        
-        // それでも見つからない場合のフェイルセーフ
-        let fallback = "";
-        try { fallback = JSON.stringify(data); } catch(e) {}
-        return fallback;
-    }
-    return String(data);
-}
-
 // --- AXIS API WebSocket ---
 let axisToken = localStorage.getItem('axisToken') || "";
 let axisWs = null;
@@ -2061,29 +2041,29 @@ function handleAxisMessage(data) {
     const channel = data.channel; const msg = data.message;
     
     if (channel === 'jmx-meteorology') {
-        const title = safeExtractText(msg?.Head?.Title) || "気象情報";
+        const title = msg?.Head?.Title || "気象情報";
         const time = msg?.Head?.ReportDateTime ? msg.Head.ReportDateTime.slice(0,16).replace("T", " ") : "";
-        let text = safeExtractText(msg?.Head?.Headline?.Text);
-        if(!text) text = safeExtractText(msg?.Body?.Comment?.Text);
+        let text = msg?.Head?.Headline?.Text || "";
+        if(!text && msg?.Body?.Comment?.Text) text = msg.Body.Comment.Text[0]?.valueOf_ || "";
         
         axisHistory.weather.unshift({title, time, text});
         if(axisHistory.weather.length > MAX_AXIS_HISTORY) axisHistory.weather.pop();
         renderAxisPanel("weatherScrollArea", axisHistory.weather);
     } 
     else if (channel === 'jmx-volcanology') {
-        const title = safeExtractText(msg?.Head?.Title) || "火山情報";
+        const title = msg?.Head?.Title || "火山情報";
         const time = msg?.Head?.ReportDateTime ? msg.Head.ReportDateTime.slice(0,16).replace("T", " ") : "";
-        let text = safeExtractText(msg?.Head?.Headline?.Text);
-        if(!text) text = safeExtractText(msg?.Body?.Comment?.Text);
+        let text = msg?.Head?.Headline?.Text || "";
+        if(!text && msg?.Body?.Comment?.Text) text = msg.Body.Comment.Text[0]?.valueOf_ || "";
         
         axisHistory.volcano.unshift({title, time, text});
         if(axisHistory.volcano.length > MAX_AXIS_HISTORY) axisHistory.volcano.pop();
         renderAxisPanel("volcanoScrollArea", axisHistory.volcano);
     }
     else if (channel === 'breaking-news') {
-        const title = safeExtractText(msg?.Title) || "ニュース速報";
+        const title = msg?.Title || "ニュース速報";
         const time = msg?.ReportDateTime ? msg.ReportDateTime.slice(0,16).replace("T", " ") : "";
-        const text = safeExtractText(msg?.Text);
+        const text = (msg?.Text || []).join("<br>");
         
         axisHistory.news.unshift({title, time, text});
         if(axisHistory.news.length > MAX_AXIS_HISTORY) axisHistory.news.pop();
@@ -2102,7 +2082,7 @@ function renderAxisPanel(areaId, historyArray) {
             <div class="info-text">${item.text}</div>
         </div>
     `).join("");
-    updatePanelScroll(areaId, historyArray);
+    updatePanelScroll(areaId, html);
 }
 
 function updatePanelScroll(areaId, html) {
