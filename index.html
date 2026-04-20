@@ -465,6 +465,9 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
                 <label>観測点アイコンの表示 <input type="checkbox" id="chkShowObsPoints"></label>
             </div>
             <div class="setting-item">
+                <label>揺れ検知機能 (自動追従表示) <input type="checkbox" id="chkShakeDetect"></label>
+            </div>
+            <div class="setting-item">
                 <label>EEW受信元
                     <select id="selEewSource" style="background:#222; color:#fff; border:1px solid #555; padding:4px;">
                         <option value="wolfx">Wolfx</option>
@@ -546,6 +549,7 @@ window.eewOriginalTextList = [];
 const defaultSettings = {
     eewPrediction: false,
     showObsPoints: false,
+    shakeDetect: false, // 追加: 揺れ検知機能
     eewSource: 'wolfx',
     volume: 0.5,
     alarmPitch: 1500,
@@ -624,6 +628,12 @@ document.getElementById('chkShowObsPoints').addEventListener('change', (e) => {
     userSettings.showObsPoints = e.target.checked;
     saveSettings();
     refreshMapDisplay();
+});
+
+document.getElementById('chkShakeDetect').checked = userSettings.shakeDetect;
+document.getElementById('chkShakeDetect').addEventListener('change', (e) => {
+    userSettings.shakeDetect = e.target.checked;
+    saveSettings();
 });
 
 document.getElementById('selEewSource').value = userSettings.eewSource;
@@ -1254,6 +1264,7 @@ const lMap = L.map('leafletMap', {
 
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 20 }).addTo(lMap);
 let geojsonLayer, tsunamiGeojsonLayer = null; let obsLayer = L.layerGroup().addTo(lMap); let latestQuakeMarker = null; let epicenterMarkers = new Map(); let prefData = null; let currentTsunamiData = null;
+const shakeDetectLayer = L.layerGroup().addTo(lMap); // 追加: 揺れ検知レイヤー
 window.jmaStationsJson = null;
 
 lMap.createPane('tsunamiPane'); lMap.getPane('tsunamiPane').style.zIndex = 410; lMap.getPane('tsunamiPane').style.pointerEvents = 'none';
@@ -1626,7 +1637,7 @@ async function updateWolfxEEW(data) {
     }
 }
 
-/* ================= 強震モニタ取得・2D描画 ================= */
+/* ================= 強震モニタ取得・2D描画 & 揺れ検知機能 ================= */
 let sites=[];
 const loadSites=async()=>{ 
     try {
@@ -1653,12 +1664,116 @@ function drawKyoshin(d){
     renderKyoshinCanvas(d);
 }
 
+let isShakeDetectActive = false;
+let preShakeDetectMode = false;
+let shakeDetectCooldown = null;
+
+function handleShakeDetection(activeSites) {
+    shakeDetectLayer.clearLayers();
+    if (isEEWActive || selectedHistoryQuake !== null) return; // EEW中や過去履歴閲覧中は無効化
+
+    let validSites = [];
+    for (let i = 0; i < activeSites.length; i++) {
+        let s1 = activeSites[i];
+        let hasNeighbor = false;
+        // ノイズ除去：40km以内に他の検知点があるか確認
+        for (let j = 0; j < activeSites.length; j++) {
+            if (i === j) continue;
+            let d = getDistance(s1.lat, s1.lng, activeSites[j].lat, activeSites[j].lng);
+            if (d < 40) { 
+                hasNeighbor = true;
+                break;
+            }
+        }
+        if (hasNeighbor) validSites.push(s1);
+    }
+
+    if (validSites.length >= 2) {
+        if (shakeDetectCooldown) { clearTimeout(shakeDetectCooldown); shakeDetectCooldown = null; }
+
+        if (!isShakeDetectActive) {
+            isShakeDetectActive = true;
+            preShakeDetectMode = isRealtimeOnlyMode;
+            if (!isRealtimeOnlyMode) {
+                // 非同期にして無限ループを防止
+                setTimeout(() => {
+                    isRealtimeOnlyMode = true;
+                    document.getElementById('btnRealtimeMode').classList.add('active');
+                    document.getElementById('btnNormalMode').classList.remove('active');
+                    refreshMapDisplay();
+                }, 10);
+            }
+            playPippiBeep();
+        }
+
+        // 碁盤の目ロジック（約10km四方のグリッド）
+        let grid = {};
+        let gridSize = 0.1;
+        let bounds = L.latLngBounds();
+
+        validSites.forEach(s => {
+            let gx = Math.floor(s.lng / gridSize);
+            let gy = Math.floor(s.lat / gridSize);
+            let key = `${gx}_${gy}`;
+            if (!grid[key]) {
+                grid[key] = { maxLv: s.lv, sw: [gy * gridSize, gx * gridSize], ne: [(gy + 1) * gridSize, (gx + 1) * gridSize] };
+            } else {
+                if (s.lv > grid[key].maxLv) grid[key].maxLv = s.lv;
+            }
+        });
+
+        Object.values(grid).forEach(cell => {
+            let colorIdx = Math.floor(Math.min(Math.max(0, cell.maxLv), KYOSHIN_COLORS.length - 1)) || 0;
+            let cStr = KYOSHIN_COLORS[colorIdx];
+            let rect = L.rectangle([cell.sw, cell.ne], { 
+                color: cStr, 
+                weight: 2, 
+                fillColor: hexToRgba(cStr, 0.3), 
+                opacity: 0.9 
+            });
+            shakeDetectLayer.addLayer(rect);
+            bounds.extend(cell.sw); bounds.extend(cell.ne);
+        });
+
+        if (bounds.isValid()) {
+            lMap.flyToBounds(bounds, { padding: [50, 50], maxZoom: 8, duration: 1.2 });
+        }
+    } else {
+        if (isShakeDetectActive) {
+            if (!shakeDetectCooldown) {
+                shakeDetectCooldown = setTimeout(() => {
+                    isShakeDetectActive = false;
+                    if (!preShakeDetectMode && isRealtimeOnlyMode) {
+                        setTimeout(() => {
+                            isRealtimeOnlyMode = false;
+                            document.getElementById('btnNormalMode').classList.add('active');
+                            document.getElementById('btnRealtimeMode').classList.remove('active');
+                            refreshMapDisplay();
+                            // 元の震央位置に戻す
+                            if (window.currentEarthquakeData && window.currentEarthquakeData.hypocenter && window.currentEarthquakeData.hypocenter.latitude && window.currentEarthquakeData.hypocenter.latitude !== -200) {
+                                lMap.flyTo([window.currentEarthquakeData.hypocenter.latitude, window.currentEarthquakeData.hypocenter.longitude], 8, {duration: 1.5});
+                            } else {
+                                lMap.flyTo([37.5, 137], 5.2, {duration: 1.5});
+                            }
+                        }, 10);
+                    }
+                    shakeDetectLayer.clearLayers();
+                    shakeDetectCooldown = null;
+                }, 5000); // 5秒間揺れがなければ解除
+            }
+        }
+    }
+}
+
 function renderKyoshinCanvas(d) {
     if (!kyoshinCanvas.width || !sites.length) return;
     const ctx = kyoshinCanvas.getContext('2d'); ctx.clearRect(0, 0, kyoshinCanvas.width, kyoshinCanvas.height);
     if (selectedHistoryQuake !== null) return;
     const intens = d.realTimeData.intensity;
     const zoom = lMap.getZoom(); const baseRadius = Math.max(0.8, Math.pow(zoom, 2) * 0.08);
+    
+    let activeSites = [];
+
     for(let i=0; i<sites.length; i++){
         if(intens[i] === undefined || intens[i] === null) continue;
         
@@ -1674,6 +1789,11 @@ function renderKyoshinCanvas(d) {
             
             // KYOSHIN_COLORS (NIED準拠: -3〜7) にマッピング
             lv = intensityIndex; 
+        }
+
+        // 揺れ検知：震度1以上（lv >= 8）
+        if (userSettings.shakeDetect && lv >= 8) {
+            activeSites.push({ lat: sites[i].lat, lng: sites[i].lng, lv: lv });
         }
 
         const colorIdx = Math.floor(Math.min(Math.max(0, lv), KYOSHIN_COLORS.length - 1)) || 0;
@@ -1693,6 +1813,10 @@ function renderKyoshinCanvas(d) {
         if (pt.x < -baseRadius || pt.x > kyoshinCanvas.width + baseRadius || pt.y < -baseRadius || pt.y > kyoshinCanvas.height + baseRadius) continue;
         ctx.beginPath(); ctx.arc(pt.x, pt.y, baseRadius, 0, Math.PI * 2);
         ctx.fillStyle = hexToRgba(colorStr, alpha); ctx.fill();
+    }
+
+    if (userSettings.shakeDetect) {
+        handleShakeDetection(activeSites);
     }
 }
 
