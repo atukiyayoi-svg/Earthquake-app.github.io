@@ -100,6 +100,29 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
          0 0 8px #fff; 
 }
 
+/* --- 津波避難ラベル --- */
+#tsunamiEvacuateLabel {
+    position: absolute;
+    bottom: 110px; /* displayModeWrapの少し上に配置 */
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255, 0, 0, 0.9);
+    color: #fff;
+    border: 4px solid #ffff00;
+    padding: 10px 24px;
+    font-size: 26px;
+    font-weight: 900;
+    border-radius: 8px;
+    z-index: 2000;
+    display: none;
+    box-shadow: 0 0 25px rgba(255, 0, 0, 0.8);
+    text-shadow: 0 0 8px #000;
+    animation: blink 0.5s infinite alternate;
+    pointer-events: none;
+    white-space: nowrap;
+    letter-spacing: 2px;
+}
+
 /* --- 表示切替ボタン --- */
 #displayModeWrap {
     position: absolute;
@@ -430,6 +453,7 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 <div id="eewPopup"></div>
 <div id="leafletWrap">
     <div id="leafletMap"></div>
+    <div id="tsunamiEvacuateLabel">！津波逃げて！(Tsunami! Evacuate!)</div>
     <div id="displayModeWrap">
         <button id="btnNormalMode" class="modeBtn active">通常表示</button>
         <button id="btnRealtimeMode" class="modeBtn">リアルタイム揺れのみ</button>
@@ -1800,7 +1824,7 @@ function handleShakeDetection(activeSites) {
         });
 
         let grid = {};
-        let gridSize = 0.2; 
+        let gridSize = 0.4; // ★ 0.2から0.4に変更して軽量化
         let detectedRegions = new Set();
 
         validSites.forEach(s => {
@@ -1944,7 +1968,23 @@ function updateTsunamiMap() {
 
 function updateTsunamiDisplay(data, eqData) {
     currentTsunamiData = data; updateTsunamiMap(); 
-    const area = document.getElementById("tsunamiScrollArea"); if(!area) return;
+    const area = document.getElementById("tsunamiScrollArea"); 
+
+    // ★ 津波警報判定によるラベル表示の制御
+    let hasWarning = false;
+    if (data && !data.cancelled && data.areas) {
+        hasWarning = data.areas.some(a => ["MajorWarning", "MajorTsunami", "Warning", "TsunamiWarning"].includes(a.grade));
+    } else if (eqData) {
+        const dt = eqData.domesticTsunami;
+        if (dt === "Warning" || dt === "MajorWarning") hasWarning = true;
+    }
+    const evacLabel = document.getElementById("tsunamiEvacuateLabel");
+    if (evacLabel) {
+        evacLabel.style.display = hasWarning ? "block" : "none";
+    }
+
+    if(!area) return;
+
     let hasAreaInfo = (data && !data.cancelled && data.areas && data.areas.length > 0);
 
     if (!hasAreaInfo && eqData) {
