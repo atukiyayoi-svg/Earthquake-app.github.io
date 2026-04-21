@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <style>
     :root {
-        --bg-color: #0a0a0a;
+        --bg-color: #050505;
         --panel-bg: rgba(20, 20, 20, 0.95);
         --text-main: #e0e0e0;
         --text-muted: #aaaaaa;
@@ -14,6 +14,7 @@
         --accent-cyan: #00ffcc;
         --accent-red: #ff4444;
         --accent-orange: #ff9900;
+        --accent-green: #00c800;
         --border-color: rgba(255, 255, 255, 0.2);
     }
     
@@ -44,6 +45,7 @@
         border-bottom: 2px solid var(--accent-blue);
         padding-bottom: 10px;
         margin-top: 0;
+        text-shadow: 0 0 15px rgba(0,85,255,0.5);
     }
 
     h2 {
@@ -51,7 +53,7 @@
         font-size: 20px;
         border-left: 4px solid var(--accent-cyan);
         padding-left: 10px;
-        margin-top: 30px;
+        margin-top: 40px;
         background: rgba(0, 255, 204, 0.1);
         padding-top: 5px;
         padding-bottom: 5px;
@@ -59,99 +61,111 @@
 
     h3 {
         color: #fff;
-        font-size: 16px;
-        margin-top: 20px;
+        font-size: 17px;
+        margin-top: 25px;
         border-bottom: 1px dashed var(--border-color);
         padding-bottom: 5px;
     }
 
-    p {
-        margin-bottom: 15px;
-        color: var(--text-muted);
-    }
+    p { margin-bottom: 15px; color: var(--text-muted); }
+    ul { color: var(--text-muted); padding-left: 20px; }
+    li { margin-bottom: 8px; }
+    a { color: var(--accent-blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
 
-    ul {
-        color: var(--text-muted);
-        padding-left: 20px;
-    }
-
-    li {
-        margin-bottom: 8px;
-    }
-
-    a {
-        color: var(--accent-blue);
-        text-decoration: none;
-    }
-
-    a:hover {
-        text-decoration: underline;
-    }
-
+    /* 各種ボックススタイル */
     .alert-box {
         background: rgba(255, 68, 68, 0.1);
         border: 1px solid var(--accent-red);
         border-left: 5px solid var(--accent-red);
-        padding: 15px;
-        border-radius: 4px;
-        margin: 20px 0;
+        padding: 15px; border-radius: 4px; margin: 20px 0;
     }
-
-    .alert-box h3 {
-        color: var(--accent-red);
-        margin-top: 0;
-        margin-bottom: 10px;
-        border: none;
-    }
-
-    .alert-box p {
-        color: #ffcccc;
-        margin: 0;
-        font-weight: bold;
-    }
+    .alert-box h3 { color: var(--accent-red); margin-top: 0; margin-bottom: 10px; border: none; }
+    .alert-box p { color: #ffcccc; margin: 0; font-weight: bold; }
 
     .legal-box {
         background: rgba(255, 153, 0, 0.1);
         border: 1px solid var(--accent-orange);
         border-left: 5px solid var(--accent-orange);
-        padding: 15px;
-        border-radius: 4px;
-        margin: 20px 0;
+        padding: 15px; border-radius: 4px; margin: 20px 0;
     }
-
-    .legal-box h3 {
-        color: var(--accent-orange);
-        margin-top: 0;
-        margin-bottom: 10px;
-        border: none;
-    }
+    .legal-box h3 { color: var(--accent-orange); margin-top: 0; margin-bottom: 10px; border: none; }
 
     .credit-box {
         background: rgba(255, 255, 255, 0.05);
         border: 1px solid var(--border-color);
-        padding: 15px;
-        border-radius: 4px;
-        margin: 20px 0;
+        padding: 15px; border-radius: 4px; margin: 20px 0;
     }
     
     .badge {
-        display: inline-block;
-        padding: 2px 6px;
-        background: #333;
-        color: #fff;
-        font-size: 12px;
-        border-radius: 3px;
-        margin-right: 5px;
-        border: 1px solid #555;
+        display: inline-block; padding: 2px 6px; background: #333; color: #fff;
+        font-size: 12px; border-radius: 3px; margin-right: 5px; border: 1px solid #555;
     }
     
     .feature-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 15px;
+        display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
     }
-    @media (max-width: 600px) {
+
+    /* === システムマップ (System Architecture) === */
+    .sys-map-container {
+        background: #0a0a0a; border: 1px solid #333; border-radius: 8px;
+        padding: 20px; margin: 20px 0; font-family: monospace; font-size: 13px;
+        display: flex; flex-direction: column; gap: 15px;
+    }
+    .sys-row { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; }
+    .sys-node {
+        background: #1a1a1a; border: 1px solid #555; border-radius: 6px;
+        padding: 12px 15px; text-align: center; color: #fff; min-width: 140px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.5); position: relative;
+    }
+    .sys-node.source { border-color: var(--accent-blue); background: rgba(0,85,255,0.1); }
+    .sys-node.core { border-color: var(--accent-cyan); background: rgba(0,255,204,0.1); font-weight: bold; }
+    .sys-node.ui { border-color: var(--accent-orange); background: rgba(255,153,0,0.1); }
+    .sys-arrow { color: #555; font-size: 20px; font-weight: bold; display: flex; align-items: center; }
+    .sys-arrow-down { text-align: center; color: #555; font-size: 20px; font-weight: bold; margin: -5px 0; }
+
+    /* === 視覚的解説アニメーション (Visual Explanations) === */
+    .visual-demo {
+        background: #000; border: 1px solid #333; border-radius: 8px;
+        height: 200px; display: flex; align-items: center; justify-content: center;
+        position: relative; overflow: hidden; margin: 15px 0;
+    }
+    
+    /* EEWアニメーション */
+    .eew-epi { width: 12px; height: 12px; background: red; border-radius: 50%; position: absolute; z-index: 10; box-shadow: 0 0 10px red; }
+    .eew-p-wave, .eew-s-wave {
+        position: absolute; border-radius: 50%; top: 50%; left: 50%;
+        transform: translate(-50%, -50%); border: 2px solid transparent;
+    }
+    .eew-p-wave { border-color: rgba(0, 255, 255, 0.8); animation: waveExpand 4s infinite linear; }
+    .eew-s-wave { border-color: rgba(255, 69, 0, 0.9); border-width: 3px; animation: waveExpand 4s infinite linear; animation-delay: 1.5s; }
+    @keyframes waveExpand {
+        0% { width: 0; height: 0; opacity: 1; }
+        100% { width: 300px; height: 300px; opacity: 0; }
+    }
+
+    /* 揺れ検知アニメーション */
+    .sd-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; position: relative; z-index: 5; }
+    .sd-dot { width: 10px; height: 10px; background: #333; border-radius: 50%; transition: background 0.3s; }
+    .sd-dot.active { animation: dotFlash 3s infinite; }
+    .sd-box {
+        position: absolute; border: 2px solid rgba(255,0,0,0); background: rgba(255,0,0,0);
+        top: -10px; left: -10px; right: -10px; bottom: -10px; z-index: 2;
+        animation: boxFlash 3s infinite; pointer-events: none;
+    }
+    @keyframes dotFlash {
+        0%, 100% { background: #333; }
+        20%, 80% { background: #ff4444; box-shadow: 0 0 8px #ff4444; }
+    }
+    @keyframes boxFlash {
+        0%, 100% { border-color: rgba(255,0,0,0); background: rgba(255,0,0,0); }
+        20%, 80% { border-color: rgba(255,0,0,0.8); background: rgba(255,0,0,0.2); }
+    }
+
+    @media (max-width: 768px) {
         .feature-grid { grid-template-columns: 1fr; }
+        .sys-row { flex-direction: column; align-items: center; gap: 5px; }
+        .sys-arrow { transform: rotate(90deg); margin: 5px 0; }
     }
 </style>
 </head>
@@ -162,61 +176,109 @@
     <p style="text-align: center;">バージョン: <span id="ver-text">V4.2.0</span></p>
 
     <section>
-        <h2>1. システム概要と基本操作</h2>
-        <p>本システム「EPICA」は、各種APIから取得したデータを基に、リアルタイムの地震動（強震モニタ）、緊急地震速報（EEW）、津波情報、各種気象情報を2Dマップ上で総合的に監視・可視化・自動読み上げを行う統合防災ダッシュボードです。</p>
+        <h2>1. システム概要とアーキテクチャ</h2>
+        <p>本システム「EPICA」は、各種外部APIから取得したデータを基に、リアルタイムの地震動（強震モニタ）、緊急地震速報（EEW）、津波情報、各種気象情報を2Dマップ(Leaflet)上で総合的に監視・可視化・自動読み上げを行う統合防災ダッシュボードです。</p>
         
+        <h3>システム構成図 (System Map)</h3>
+        <div class="sys-map-container">
+            <div class="sys-row">
+                <div class="sys-node source"><b>Yahoo! API</b><br>リアルタイム強震データ</div>
+                <div class="sys-node source"><b>P2Pquake API</b><br>地震履歴・津波情報</div>
+                <div class="sys-node source"><b>Wolfx / AXIS API</b><br>緊急地震速報・気象情報</div>
+                <div class="sys-node source"><b>J-SHIS API</b><br>表層地盤増幅率(ARV)</div>
+            </div>
+            <div class="sys-arrow-down">↓</div>
+            <div class="sys-row">
+                <div class="sys-node core">
+                    <b>EPICA Core Logic</b><br>
+                    <span style="font-size:11px; color:#aaa;">P/S波到達円計算・距離減衰式予測計算<br>揺れ検知クラスタリング処理・音声キュー管理</span>
+                </div>
+            </div>
+            <div class="sys-arrow-down">↓</div>
+            <div class="sys-row">
+                <div class="sys-node ui"><b>Leaflet Map</b><br>震度ポリゴン・Canvas描画</div>
+                <div class="sys-node ui"><b>Web Speech API</b><br>自動状況読み上げ・SE</div>
+                <div class="sys-node ui"><b>DOM Panels</b><br>情報カード・履歴一覧</div>
+            </div>
+        </div>
+
         <h3>基本操作とマップモード</h3>
         <ul>
-            <li><strong>起動と音声:</strong> 起動画面で「開始」をクリックするとシステムが初期化されます。ブラウザの仕様上、画面内を一度クリック/タップすることで音声（自動読み上げ・通知音）が有効になります。</li>
+            <li><strong>起動と音声:</strong> 起動画面で「開始」をクリックするとシステムが初期化されます。ブラウザの仕様上、画面内を一度クリックすることで音声（自動読み上げ・通知音）が有効になります。</li>
             <li><strong>表示モードの切替:</strong> 画面中央下部のボタンで2Dマップのモードを切り替えます。
                 <ul>
                     <li><span class="badge">通常表示</span> 最新の地震情報に基づく震度塗り分けマップ、過去の震源地、予測震度マップなどを総合的に表示します。</li>
-                    <li><span class="badge">リアルタイム揺れのみ</span> 過去の地震情報を非表示にし、現在起きているリアルタイムの揺れ（強震モニタの観測点）のみにフォーカスします。</li>
+                    <li><span class="badge">リアルタイム揺れのみ</span> 過去の地震履歴を非表示にし、現在起きているリアルタイムの揺れ（強震モニタの観測点）のみにフォーカスします。</li>
                 </ul>
             </li>
-            <li><strong>履歴の確認:</strong> 右側の「地震情報ウィンドウ」から過去の地震をクリックすると、その地震の詳細（震央、最大震度、観測点ごとの震度）がマップおよび左パネルに復元表示されます。</li>
+            <li><strong>履歴の確認:</strong> 右側の「地震情報ウィンドウ」から過去の地震をクリックすると、その地震の詳細がマップおよび左パネルに復元表示されます。</li>
         </ul>
     </section>
 
     <section>
-        <h2>2. 情報パネルの詳細</h2>
-        <p>画面左右に配置された各種パネルは、リアルタイムに情報を受信・更新します。</p>
+        <h2>2. 主要機能の解説 (アニメーション)</h2>
+
+        <h3>緊急地震速報 (EEW) と 予測震度計算</h3>
+        <p>EEW受信時、震源情報とP波・S波の想定到達円をCanvas上でリアルタイムにアニメーション描画します。さらに、<strong>J-SHISの表層地盤増幅率(ARV)</strong>と距離減衰式を用いて、マップ上の市区町村ポリゴンごとに詳細な予測震度を動的に計算し、塗り分けを行います（海域地震の場合は観測最大震度を用いたオフセット補正が行われます）。</p>
+        <div class="visual-demo">
+            <div class="eew-epi"></div>
+            <div class="eew-p-wave"></div>
+            <div class="eew-s-wave"></div>
+            <div style="position:absolute; bottom:10px; right:10px; color:#fff; font-size:12px;">水色: P波 / 赤色: S波</div>
+        </div>
+
+        <h3>揺れ検知機能 (Shake Detection)</h3>
+        <p>強震モニタから毎秒取得される観測点データのうち、設定閾値（デフォルト: 計測震度約1.0相当）を超える揺れを検知した際、<strong>近接40km以内に他の検知点がある場合（ノイズ排除）</strong>に「揺れ検知」として判定します。検知エリアを自動計算してバウンディングボックスを描画し、マップが自動で対象地域へズームします。</p>
+        <div class="visual-demo">
+            <div class="sd-grid">
+                <div class="sd-dot"></div><div class="sd-dot active"></div><div class="sd-dot active"></div><div class="sd-dot"></div><div class="sd-dot"></div>
+                <div class="sd-dot"></div><div class="sd-dot active"></div><div class="sd-dot active"></div><div class="sd-dot active"></div><div class="sd-dot"></div>
+                <div class="sd-dot"></div><div class="sd-dot"></div><div class="sd-dot active"></div><div class="sd-dot"></div><div class="sd-dot"></div>
+                <div class="sd-box"></div>
+            </div>
+            <div style="position:absolute; bottom:10px; right:10px; color:#fff; font-size:12px;">隣接する複数点で閾値を超過した場合に発報</div>
+        </div>
+    </section>
+
+    <section>
+        <h2>3. 情報パネルと詳細機能</h2>
         
         <div class="feature-grid">
             <div>
                 <h3>左サイドバー</h3>
                 <ul>
                     <li><strong>最新情報・震度詳細パネル:</strong> 最新の地震の最大震度、震源地、M、深さを表示。下部には観測された地域を震度順にスクロール表示します。</li>
-                    <li><strong>津波パネル:</strong> 発表中の津波警報・注意報・予報のエリア、到達予想時刻、予想高さを表示します。</li>
-                    <li><strong>EEWコンテナ:</strong> 緊急地震速報（警報・予報）を受信した際、リアルタイムで情報カードが表示され、対象地域（Forecast）や最大予測震度が視覚的に強調されます。</li>
+                    <li><strong>津波パネル:</strong> 発表中の津波警報・注意報・予報のエリア、到達予想時刻、予想高さを表示。警報時は画面中央下部に<strong>「！津波逃げて！」</strong>の点滅ラベルが表示されます。</li>
+                    <li><strong>EEWコンテナ:</strong> 緊急地震速報（警報・予報）を受信した際、対象地域（Forecast）や最大予測震度が視覚的に強調されたカードが表示されます。</li>
                 </ul>
             </div>
             <div>
                 <h3>右サイドバー & その他</h3>
                 <ul>
-                    <li><strong>自由付随コメント:</strong> EEW受信時の補足事項（PLUM法や訓練報の旨など）や、地震情報の付随コメントを表示します。</li>
-                    <li><strong>予測長周期地震動階級 (LPGM):</strong> 地震の規模と深さから簡易算出された長周期地震動階級（1〜4）を予測・点灯表示します。</li>
-                    <li><strong>AXIS 情報パネル:</strong> 気象情報、火山情報、ニュース速報をそれぞれ受信・履歴表示します。</li>
-                    <li><strong>本日のまとめ (23:50自動作動):</strong> 毎日23時50分00秒に、その日の地震回数と最大震度・震央を自動集計し、音声と共にパネル表示します。</li>
+                    <li><strong>自由付随コメント:</strong> EEW受信時の補足事項（PLUM法や訓練報など）や、地震情報の付随コメントを表示します。</li>
+                    <li><strong>予測長周期地震動階級 (LPGM):</strong> 地震の規模(M)と深さから簡易算出された長周期地震動階級（1〜4）を予測・点灯表示します。</li>
+                    <li><strong>AXIS 情報パネル:</strong> 気象・火山・ニュース速報をそれぞれ受信・履歴表示します。</li>
+                    <li><strong>本日のまとめ機能:</strong> 毎日23時50分00秒に、その日の地震回数と最大震度・震央を自動集計し、音声と共にパネルに表示します。</li>
                 </ul>
             </div>
         </div>
     </section>
 
     <section>
-        <h2>3. 各種設定（カスタマイズ機能）</h2>
-        <p>画面中央下部の「⚙ 設定」ボタンから、システムの動作を詳細にカスタマイズ可能です。設定内容はブラウザに自動保存されます。</p>
+        <h2>4. 各種設定とデバッグ機能</h2>
+        <p>画面中央下部の「⚙ 設定」ボタンから、システムの動作を詳細にカスタマイズ可能です。設定はブラウザに自動保存されます。</p>
         
         <ul>
-            <li><strong>拡張機能:</strong>
+            <li><strong>拡張機能のトグル:</strong> EEW予測マップのON/OFF、観測点アイコン（JMAマーカー）の表示、揺れ検知機能の有効化および閾値調整（5〜15レベル）。</li>
+            <li><strong>EEWソースとAPI設定:</strong> EEWの受信元（Wolfx または AXIS）の切り替え。AXIS利用時は専用のアクセストークンを入力し接続します。</li>
+            <li><strong>音声とBGM設定:</strong> 
                 <ul>
-                    <li><strong>EEW予測マップ表示:</strong> J-SHIS表層地盤増幅率データを用いて、EEW受信時に各地域（ポリゴン）の予測震度を計算し、マップを自動で塗り分けます。</li>
-                    <li><strong>観測点アイコンの表示:</strong> 地震情報を受信した際、気象庁の実際の観測点位置に震度アイコン（色分けされたマーカー）をマップ上に詳細プロットします。</li>
-                    <li><strong>EEW受信元:</strong> 緊急地震速報の受信元を「Wolfx」または「AXIS (要トークン)」から選択可能です。</li>
+                    <li><strong>時刻連動BGM:</strong> システム時計と連動し、朝・昼・夕方・夜でBGMが自動的に切り替わります（EEW受信時や津波警報時は自動ミュート）。</li>
+                    <li><strong>音声合成 (Web Speech API):</strong> 読み上げの速度・ピッチ調整が可能。地震発生時刻からの経過時間（「先ほど、○分前に発生した〜」等）や、津波の状況を動的に組み立てて読み上げます。</li>
+                    <li><strong>SE個別調整:</strong> EEW新規受信、更新、最終報、震度7到達、津波警報など、通知種別ごとに音量を細かく調整できます。</li>
                 </ul>
             </li>
-            <li><strong>AXIS API 連携設定:</strong> 気象・火山・ニュース速報を受信するためのアクセストークンを入力し、接続を確立します。</li>
-            <li><strong>音声・SE個別設定:</strong> Web Speech APIを利用した詳細な状況読み上げ（速度・ピッチ）や、システム時間帯に連動するBGM音量、さらに「新規EEW受信」「EEW更新」「震度7検知」「津波」など、各通知アクションごとのSE音量を個別に調整できます。</li>
+            <li><strong>デバッグモード:</strong> キーボードの <code>1</code> キーを押下することで、「南海トラフ巨大地震 (M9.1)」を想定したEEW、強震モニタ揺れ、津波警報のテストシミュレーションを発動し、システムの挙動を確認できます。</li>
         </ul>
     </section>
 
@@ -225,8 +287,8 @@
             <h3>⚠️ 予測機能に関する重要・免責事項</h3>
             <p>本システム上で描画される以下の情報は、<strong>独自のアルゴリズムに基づく完全な「予測」ならびに「推定」であり、正確なものではありません。</strong></p>
             <ul style="color: #ffcccc; margin-top: 10px;">
-                <li><strong>P波・S波の伝播サークルの描画:</strong> 理論値（P波: 約6.5〜9.1km/s, S波: 約3.5〜4.9km/s）に基づく簡易的な描画であり、実際の地震波の到達を示すものではありません。</li>
-                <li><strong>J-SHISモデルを用いた「予測震度マップ」:</strong> マグニチュード、深さ、距離、および地盤増幅率（ARV）を用いた計算上の予測であり、実際の観測震度を保証するものではありません。</li>
+                <li><strong>P波・S波の伝播サークルの描画:</strong> 理論値に基づく簡易的な描画であり、実際の地震波の到達を保証するものではありません。</li>
+                <li><strong>J-SHISモデルを用いた「予測震度マップ」:</strong> 計算上の予測であり、地盤状況や断層の破壊過程により実際の観測震度とは大きく異なる場合があります。</li>
                 <li><strong>予測長周期地震動階級 (LPGM):</strong> マグニチュードと深さから簡易算出された参考値です。</li>
             </ul>
             <p style="margin-top: 10px;">本システムの情報を用いて生じた、いかなる損害・トラブルについても作者は一切の責任を負いません。実際の避難行動や意思決定の際は、必ず<strong>気象庁や自治体が発表する公式の防災情報</strong>に従ってください。</p>
@@ -234,35 +296,11 @@
     </section>
 
     <section>
-        <h2>4. 取得情報の情報元・使用API</h2>
-        <p>本システムは以下の外部APIおよびオープンデータを利用して構築されています。</p>
-        <ul>
-            <li><strong>リアルタイム震度データ (強震モニタ):</strong><br>
-                取得元: Yahoo! 防災速報 / NIED (防災科学技術研究所)<br>
-                用途: リアルタイムの揺れ（Canvas描画）の可視化。NIED準拠の21段階カラーマッピングを使用。</li>
-            <li><strong>地震履歴・津波情報 (P2Pquake API):</strong><br>
-                取得元: P2P地震情報 API v2 (<a href="https://www.p2pquake.net/json_api_v2/" target="_blank">https://www.p2pquake.net/json_api_v2/</a>)<br>
-                用途: 地震履歴一覧の取得、震度速報・震源情報の受信、津波警報・注意報のエリア情報、本日のまとめデータの集計。</li>
-            <li><strong>緊急地震速報 (Wolfx API):</strong><br>
-                取得元: Wolfx WebSocket API (<a href="https://wolfx.jp/" target="_blank">https://wolfx.jp/</a>)<br>
-                用途: 緊急地震速報（警報・予報）の即時受信および表示。</li>
-            <li><strong>総合防災情報 (AXIS API):</strong><br>
-                取得元: AXIS WebSocket API (Prioris)<br>
-                用途: 気象情報、火山情報、ニュース速報の受信、および緊急地震速報の代替受信（要トークン設定）。</li>
-            <li><strong>表層地盤増幅率データ (J-SHIS API):</strong><br>
-                取得元: 防災科学技術研究所 J-SHIS API V4 (<a href="https://www.j-shis.bosai.go.jp/api" target="_blank">https://www.j-shis.bosai.go.jp/api</a>)<br>
-                用途: EEW受信時における、各地域（メッシュ）の精緻な予測震度の動的計算。</li>
-            <li><strong>ベースマップ及び各種静的データ:</strong><br>
-                CartoDB Dark Matterタイル、日本国内ポリゴン(saibun.geojson)、津波予報区ポリゴン(tsunami.json)、気象庁観測点座標(JMAstations.json)。</li>
-        </ul>
-    </section>
-
-    <section>
         <div class="legal-box">
             <h3>⚖️ 法律関連の注意事項 (気象業務法について)</h3>
-            <p>日本国内において、気象庁以外の者が独自の計算式を用いて「予測震度」や「緊急地震速報に類する情報」を作成し、これを<strong>不特定多数の一般大衆に向けて配信・通知する行為</strong>（インターネット上での公開配信やSNSでの自動発信など）は、気象業務法に基づく<strong>気象庁長官の「予報業務許可（地震動）」</strong>が必要となる場合があります。</p>
-            <p style="margin-top: 10px;">本システム（HTMLファイル）をユーザー自身がローカル環境等で実行し、自己の判断・監視のために個人的に利用する範囲（自己完結型の処理）であれば問題ありません。しかし、本システムの画面をライブ配信したり、生成された予測震度マップを不特定多数へ二次配信したりする行為は、関係法令に抵触する恐れがあるため十分にご注意ください。</p>
-            <p style="margin-top: 5px; font-size: 14px;">※詳細については気象庁の公式見解をご確認ください。<br><a href="https://www.jma.go.jp/jma/kishou/shinsei/yohou/yohou.html" target="_blank">気象庁: 予報業務の許可について</a></p>
+            <p>日本国内において、気象庁以外の者が独自の計算式を用いて「予測震度」を作成し、これを<strong>不特定多数の一般大衆に向けて配信・通知する行為</strong>は、気象業務法に基づく<strong>気象庁長官の「予報業務許可（地震動）」</strong>が必要となる場合があります。</p>
+            <p style="margin-top: 10px;">本システムをローカル環境等で実行し、個人的に利用する範囲（自己完結型の処理）であれば問題ありませんが、本システムの画面をライブ配信したり、生成された予測震度マップを不特定多数へ二次配信したりする行為は、関係法令に抵触する恐れがあるため十分にご注意ください。</p>
+            <p style="margin-top: 5px; font-size: 14px;">※詳細については<a href="https://www.jma.go.jp/jma/kishou/shinsei/yohou/yohou.html" target="_blank">気象庁: 予報業務の許可について</a>をご確認ください。</p>
         </div>
     </section>
 
@@ -273,8 +311,7 @@
             <h3>🎵 楽曲（BGM）について</h3>
             <p>本システム内で時間帯に合わせて再生される通常音楽（朝.wav, 昼.wav, 夕方.wav, 夜.wav）は、以下のサイトの著作物を利用しています。</p>
             <ul>
-                <li><strong>配布元:</strong> 創作堂さくら紅葉</li>
-                <li><strong>URL:</strong> <a href="https://yukizakura.net/" target="_blank">https://yukizakura.net/</a></li>
+                <li><strong>配布元:</strong> 創作堂さくら紅葉 (<a href="https://yukizakura.net/" target="_blank">https://yukizakura.net/</a>)</li>
             </ul>
         </div>
 
@@ -285,20 +322,25 @@
         </div>
         
         <div class="credit-box">
-            <h3>🌐 その他の権利について</h3>
-            <p>取得している各種地震・気象データ、GeoJSONポリゴンデータ、およびJ-SHISの地盤データ等は、各配信元・作成元の利用規約および著作権に帰属します。データの利用に関しては各サービスのオープンデータ利用規約に従ってください。</p>
+            <h3>🌐 取得API・データソースについて</h3>
+            <ul>
+                <li><strong>Yahoo! 防災速報 / NIED:</strong> リアルタイム震度データ</li>
+                <li><strong>P2P地震情報 API v2:</strong> 地震履歴一覧、津波警報エリア情報</li>
+                <li><strong>Wolfx API / AXIS API (Prioris):</strong> 緊急地震速報、気象・火山・ニュース速報</li>
+                <li><strong>防災科学技術研究所 J-SHIS API V4:</strong> 表層地盤増幅率(ARV)データ</li>
+            </ul>
+            <p style="font-size: 13px; margin-top:10px;">データの利用に関しては各配信元のオープンデータ利用規約に従ってください。</p>
         </div>
     </section>
 
     <script>
-    // 仕様書内のバージョン表記を最新の状態に更新する
     fetch('version.json')
         .then(response => response.json())
         .then(data => {
             document.getElementById('ver-text').innerText = "V" + data.version;
         })
         .catch(() => {
-            // ローカル実行時などで取得できない場合は既存のテキストを維持
+            // ローカル実行時はデフォルトの V4.2.0 を維持
         });
     </script>
 
