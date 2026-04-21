@@ -487,6 +487,9 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
         <div class="setting-group">
             <div class="setting-group-title">拡張機能</div>
             <div class="setting-item">
+                <label>プッシュ通知 (ブラウザ権限必要) <input type="checkbox" id="chkPushNotify"></label>
+            </div>
+            <div class="setting-item">
                 <label>EEW受信時の震度予測マップ表示 <input type="checkbox" id="chkEewPrediction"></label>
             </div>
             <div class="setting-item">
@@ -578,6 +581,7 @@ window.latestFullQuakeList = [];
 window.eewOriginalTextList = [];
 
 const defaultSettings = {
+    pushNotify: false,
     eewPrediction: false,
     showObsPoints: false,
     shakeDetect: false,
@@ -607,6 +611,17 @@ try {
 
 function saveSettings() {
     localStorage.setItem('epicaUserSettings', JSON.stringify(userSettings));
+}
+
+// プッシュ通知制動ヘルパー
+function sendPushNotification(title, options) {
+    if (userSettings.pushNotify && "Notification" in window && Notification.permission === "granted") {
+        try {
+            new Notification(title, options);
+        } catch (e) {
+            console.warn("Push notification failed", e);
+        }
+    }
 }
 
 const axisHistory = { weather: [], volcano: [], news: [] };
@@ -641,6 +656,25 @@ document.getElementById('btnSettings').addEventListener('click', () => {
 });
 document.getElementById('btnCloseSettings').addEventListener('click', () => {
     document.getElementById('settingsModal').style.display = 'none';
+});
+
+// プッシュ通知設定のイベントリスナー
+document.getElementById('chkPushNotify').checked = userSettings.pushNotify;
+document.getElementById('chkPushNotify').addEventListener('change', async (e) => {
+    if (e.target.checked) {
+        if (!("Notification" in window)) {
+            alert("このブラウザはプッシュ通知をサポートしていません。");
+            e.target.checked = false;
+        } else {
+            const permission = await Notification.requestPermission();
+            if (permission !== "granted") {
+                alert("通知の権限が拒否されています。ブラウザの設定を確認してください。");
+                e.target.checked = false;
+            }
+        }
+    }
+    userSettings.pushNotify = e.target.checked;
+    saveSettings();
 });
 
 document.getElementById('chkEewPrediction').checked = userSettings.eewPrediction;
@@ -1542,12 +1576,31 @@ async function updateWolfxEEW(data) {
     
     let isNewEew = !activeEEWs.has(id); let prevData = activeEEWs.get(id);
 
+    // ★ プッシュ通知 (EEW)
+    if (isNewEew || (prevData && prevData.Serial !== data.Serial)) {
+        let bodyText = `最大震度: ${data.MaxIntensity || "不明"}\n震源地: ${data.Hypocenter}\n規模: M${data.Magunitude} 深さ: ${fmt.depth(data.Depth)}`;
+        if (data.WarnArea?.Chiiki) {
+            bodyText += `\n【予測地域】\n${data.WarnArea.Chiiki}`;
+        } else if (data.Forecast && data.Forecast.length > 0) {
+            let forecastList = data.Forecast.map(f => {
+                let toInt = f.Intensity?.To;
+                return toInt ? `${f.Name}(最大${toInt})` : f.Name;
+            }).join("、");
+            bodyText += `\n【予測地域】\n${forecastList}`;
+        }
+        sendPushNotification(`${data.Title} 第${data.Serial}${data.isFinal ? '(最終)' : ''}報`, {
+            body: bodyText,
+            tag: "eew_" + id
+        });
+    }
+
     if (data.isCancel) {
         seLast.currentTime = 0; seLast.play().catch(e=>{});
         if(container) {
             const card = document.createElement("div"); card.className = "eewCard active cancel";
             card.innerHTML = `<div class="eewHeader">EEW 取消報</div><div class="eewEpicenter" style="color:#aaa;">緊急地震速報は取り消されました</div>`; container.prepend(card);
         }
+        sendPushNotification(`EEW 取消報`, { body: `緊急地震速報は取り消されました`, tag: "eew_" + id });
         setTimeout(() => { addLog(`EEW [${id}] キャンセル。`); clearEEWDisplay(id); if (!isEEWActive) loadQuakes(); }, 10000);
         return;
     }
@@ -1774,8 +1827,10 @@ function handleShakeDetection(activeSites) {
     if (validSites.length >= 2) {
         if (shakeDetectCooldown) { clearTimeout(shakeDetectCooldown); shakeDetectCooldown = null; }
 
+        let isInitialDetection = false;
         if (!isShakeDetectActive) {
             isShakeDetectActive = true;
+            isInitialDetection = true;
             preShakeDetectMode = isRealtimeOnlyMode;
             if (!isRealtimeOnlyMode) {
                 setTimeout(() => {
@@ -1868,6 +1923,15 @@ function handleShakeDetection(activeSites) {
                 <div class="info-text">以下の地域で揺れを検知しました：<br>${regionsStr}</div>
             </div>`;
         updatePanelScroll("shakeDetectScrollArea", html);
+
+        // ★ プッシュ通知 (揺れ検知)
+        if (isInitialDetection) {
+            let shindoVal = ((currentMaxLv - 6) * 0.5).toFixed(1);
+            sendPushNotification(`揺れ検知情報`, {
+                body: `時刻: ${new Date().toLocaleTimeString()}\n地域: ${regionsStr}\n計測震度目安: ${shindoVal}以上`,
+                tag: "shake_detect"
+            });
+        }
 
     } else {
         if (isShakeDetectActive) {
@@ -2186,6 +2250,20 @@ async function loadQuakes(){
                     }
                 }
                 speakText(speechText);
+
+                // ★ プッシュ通知 (地震情報)
+                let eqTitle = latestEQ.issue.type === "ScalePrompt" ? "震度速報" : (latestEQ.issue.type === "Destination" ? "震源情報" : "地震情報");
+                let eqBody = `最大震度: ${s}\n震源地: ${eqName}\n規模: M${mag !== -1 ? mag.toFixed(1) : '-.-'} 深さ: ${depthStr}\n発生時刻: ${latestEQ.earthquake.time}`;
+                
+                if (latestEQ.issue.type === "ScalePrompt") {
+                     eqBody = `最大震度: ${s}\n`;
+                     if (latestEQ.points && latestEQ.points.length > 0) {
+                         let sortedPoints = [...latestEQ.points].sort((a,b) => b.scale - a.scale).slice(0, 5);
+                         let pointsText = sortedPoints.map(p => `${p.addr}: 震度${fmt.shindo(p.scale)}`).join(", ");
+                         eqBody += `観測地域: ${pointsText}`;
+                     }
+                }
+                sendPushNotification(eqTitle, { body: eqBody, tag: "eq_" + latestEQ.earthquake.time });
             }
         }
         if (tsunamiData && !isInitialLoad) {
@@ -2194,8 +2272,22 @@ async function loadQuakes(){
                 lastTsunamiIssueTime = currentTsunamiTime;
                 if (!tsunamiData.cancelled && tsunamiData.areas && tsunamiData.areas.length > 0) {
                     playTsunami = true;
+
+                    // ★ プッシュ通知 (津波情報)
+                    const gradeMap = { "MajorWarning": "大津波警報", "MajorTsunami": "大津波警報", "Warning": "津波警報", "TsunamiWarning": "津波警報", "Watch": "津波注意報", "TsunamiAdvisory": "津波注意報", "Unknown": "津波予報" };
+                    let tBody = tsunamiData.areas.map(a => {
+                        let gName = gradeMap[a.grade] || "津波情報";
+                        let hStr = a.maxHeight?.description || (a.maxHeight?.value ? a.maxHeight.value + 'm' : '--');
+                        return `[${gName}] ${a.name} / ${hStr}`;
+                    }).join("\n");
+                    
+                    if (tBody.length > 200) tBody = tBody.substring(0, 197) + "...";
+                    sendPushNotification(`津波情報発表`, { body: tBody, tag: "tsunami_" + currentTsunamiTime });
+
                 } else if (tsunamiData.cancelled) {
                     playTsunamiCancel = true;
+                    // ★ プッシュ通知 (津波解除)
+                    sendPushNotification(`津波情報`, { body: `津波警報・注意報はすべて解除されました。`, tag: "tsunami_cancel" });
                 }
             }
         }
