@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>気象庁防災情報XML 解析ビューア (総合対応版)</title>
+    <style>
+        :root {
+            --primary: #1a365d;
+            --accent: #2b6cb0;
+            --bg: #f8fafc;
+            --border: #e2e8f0;
+            --tsunami-bg: #fff5f5;
+            --tsunami-border: #fed7d7;
+            --eq-bg: #fdf4ff;
+            --eq-border: #fbcfe8;
+            --vol-bg: #fffbeb;
+            --vol-border: #fde68a;
+            --warn-bg: #fff1f2;
+            --warn-border: #fecdd3;
+            --met-bg: #f0fdf4;
+            --met-border: #bbf7d0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            margin: 0; padding: 20px;
+            color: #2d3748;
+        }
+        .container { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 350px 1fr; gap: 20px; }
+        header { grid-column: 1 / -1; margin-bottom: 10px; border-bottom: 3px solid var(--primary); padding-bottom: 10px; }
+        
+        /* 履歴リスト */
+        .sidebar { background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; flex-direction: column; height: 85vh; }
+        .sidebar-header { padding: 15px; background: var(--primary); color: white; border-radius: 8px 8px 0 0; font-weight: bold; }
+        .feed-select { padding: 10px; border-bottom: 1px solid var(--border); }
+        select { width: 100%; padding: 8px; border-radius: 4px; border: 1px solid var(--border); }
+        #history-list { overflow-y: auto; flex-grow: 1; }
+        .history-item { padding: 12px 15px; border-bottom: 1px solid var(--border); cursor: pointer; font-size: 0.9em; transition: 0.2s; }
+        .history-item:hover { background: #edf2f7; }
+        .history-item.active { background: #ebf8ff; border-left: 4px solid var(--accent); }
+        .item-time { font-size: 0.8em; color: #718096; }
+        .item-title { font-weight: bold; display: block; margin-top: 2px; }
+
+        /* 詳細エリア */
+        .main-view { background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 25px; overflow-y: auto; height: 85vh; }
+        .status-bar { margin-bottom: 15px; font-weight: bold; color: var(--accent); display: flex; justify-content: space-between; }
+        .report-header { border-bottom: 2px solid var(--border); margin-bottom: 20px; padding-bottom: 10px; }
+        .headline-box { background: #fffaf0; border: 1px solid #fbd38d; padding: 15px; border-radius: 6px; margin-bottom: 20px; font-size: 1.05em;}
+        
+        /* セクション共通スタイル */
+        .info-section { background: white; border: 1px solid var(--border); padding: 15px 20px; border-radius: 6px; margin-bottom: 20px; }
+        .info-section h3 { margin: 0 0 15px 0; border-bottom: 2px solid var(--border); padding-bottom: 8px; }
+        .info-section h4 { margin: 15px 0 5px 0; color: var(--primary); }
+        .data-list { max-height: 250px; overflow-y: auto; border: 1px solid var(--border); padding: 10px 15px; border-radius: 4px; background: #fafafa; font-size: 0.95em; }
+        .data-list ul { margin: 5px 0 15px 0; padding-left: 20px; }
+        
+        /* カテゴリ別カラー設定 */
+        .section-tsunami { background-color: var(--tsunami-bg); border-color: var(--tsunami-border); }
+        .section-tsunami h3 { color: #c53030; border-color: #fc8181; }
+        .section-earthquake { background-color: var(--eq-bg); border-color: var(--eq-border); }
+        .section-earthquake h3 { color: #97266d; border-color: #f687b3; }
+        .section-volcano { background-color: var(--vol-bg); border-color: var(--vol-border); }
+        .section-volcano h3 { color: #975a16; border-color: #f6ad55; }
+        .section-warning { background-color: var(--warn-bg); border-color: var(--warn-border); }
+        .section-warning h3 { color: #e53e3e; border-color: #fc8181; }
+        .section-meteorology { background-color: var(--met-bg); border-color: var(--met-border); }
+        .section-meteorology h3 { color: #276749; border-color: #68d391; }
+
+        /* テーブルスタイル */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 10px; font-size: 0.95em; background: white; }
+        th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; }
+        th { background: #edf2f7; color: #4a5568; }
+        
+        @media (max-width: 800px) { .container { grid-template-columns: 1fr; } .sidebar, .main-view { height: auto; } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1 style="margin:0; font-size: 1.5em; color: var(--primary);">気象庁防災情報XML 総合解析ビューア</h1>
+    </header>
+
+    <aside class="sidebar">
+        <div class="sidebar-header">電文履歴 (Atomフィード)</div>
+        <div class="feed-select">
+            <select id="feed-url" onchange="loadFeed()">
+                <optgroup label="高頻度フィード (直近の速報)">
+                    <option value="https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml" selected>地震・火山 (eqvol)</option>
+                    <option value="https://www.data.jma.go.jp/developer/xml/feed/extra.xml">気象警報・台風 (extra)</option>
+                    <option value="https://www.data.jma.go.jp/developer/xml/feed/regular.xml">定時報 (regular)</option>
+                </optgroup>
+                <optgroup label="長期フィード (過去の履歴含む)">
+                    <option value="https://www.data.jma.go.jp/developer/xml/feed/eqvol_l.xml">地震・火山 長期 (eqvol_l)</option>
+                    <option value="https://www.data.jma.go.jp/developer/xml/feed/extra_l.xml">気象警報・台風 長期 (extra_l)</option>
+                    <option value="https://www.data.jma.go.jp/developer/xml/feed/regular_l.xml">定時報 長期 (regular_l)</option>
+                </optgroup>
+            </select>
+        </div>
+        <div id="history-list">読込中...</div>
+    </aside>
+
+    <main class="main-view">
+        <div class="status-bar">
+            <span id="status">左のリストから電文を選択してください。</span>
+            <a id="xml-source-link" href="#" target="_blank" style="display:none; color:var(--accent); font-weight:normal;">XMLソースを開く</a>
+        </div>
+        <div id="detail-content"></div>
+    </main>
+</div>
+
+<script>
+    // CORS回避用プロキシ（ローカル環境テスト時などは適宜設定してください。例: 'https://corsproxy.io/?' ）
+    const PROXY = ''; 
+
+    // 時刻フォーマット補助関数
+    function formatTime(isoStr) {
+        if (!isoStr) return '-';
+        const d = new Date(isoStr);
+        if (isNaN(d.getTime())) return isoStr;
+        const month = (d.getMonth() + 1).toString();
+        const day = d.getDate().toString();
+        const hour = d.getHours().toString().padStart(2, '0');
+        const min = d.getMinutes().toString().padStart(2, '0');
+        return `${month}月${day}日 ${hour}:${min}`;
+    }
+
+    // 高さ情報抽出用
+    function getHeightDesc(parentEl) {
+        if (!parentEl) return '-';
+        const targetNode = parentEl.firstElementChild || parentEl; 
+        return targetNode.getAttribute('description') || targetNode.textContent.trim();
+    }
+
+    // 1. Atomフィードの読み込み
+    async function loadFeed() {
+        const feedUrl = document.getElementById('feed-url').value;
+        const listEl = document.getElementById('history-list');
+        listEl.innerHTML = '<div style="padding:20px; color:#718096;">フィード取得中...</div>';
+
+        try {
+            const res = await fetch(PROXY + feedUrl);
+            const text = await res.text();
+            const xml = new DOMParser().parseFromString(text, "application/xml");
+            const entries = Array.from(xml.querySelectorAll('entry'));
+
+            listEl.innerHTML = '';
+            entries.forEach((entry, idx) => {
+                const title = entry.querySelector('title').textContent;
+                const updated = new Date(entry.querySelector('updated').textContent).toLocaleString('ja-JP');
+                const url = entry.querySelector('link').getAttribute('href');
+
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                div.innerHTML = `<span class="item-time">${updated}</span><span class="item-title">${title}</span>`;
+                div.onclick = () => loadDetail(url, div);
+                listEl.appendChild(div);
+
+                if(idx === 0) loadDetail(url, div); 
+            });
+        } catch (e) {
+            listEl.innerHTML = '<div style="padding:20px; color:red;">取得エラーが発生しました。<br><small>CORS制約、またはネットワークの切断の可能性があります。</small></div>';
+        }
+    }
+
+    // 2. 個別XML（電文）の取得と解析
+    async function loadDetail(url, element) {
+        document.querySelectorAll('.history-item').forEach(el => el.classList.remove('active'));
+        if(element) element.classList.add('active');
+
+        const statusEl = document.getElementById('status');
+        const contentEl = document.getElementById('detail-content');
+        const sourceLink = document.getElementById('xml-source-link');
+        
+        statusEl.textContent = "解析中...";
+        contentEl.innerHTML = "";
+        sourceLink.style.display = 'inline';
+        sourceLink.href = url;
+
+        try {
+            const res = await fetch(PROXY + url);
+            const xmlText = await res.text();
+            const xmlDoc = new DOMParser().parseFromString(xmlText, "application/xml");
+
+            // --- ヘッダー情報の抽出 ---
+            const head = xmlDoc.querySelector('Head');
+            const title = head?.querySelector('Title')?.textContent || xmlDoc.querySelector('Control > Title')?.textContent || "タイトル不明";
+            const reportTime = formatTime(head?.querySelector('ReportDateTime')?.textContent || xmlDoc.querySelector('Control > DateTime')?.textContent);
+            const headlineText = xmlDoc.querySelector('Headline > Text')?.textContent || "";
+
+            let html = `
+                <div class="report-header">
+                    <h2 style="margin:0; color:var(--primary); font-size: 1.4em;">${title}</h2>
+                    <p style="margin: 5px 0 0 0; font-size:0.9em; color:#718096;">発表時刻: ${reportTime}</p>
+                </div>
+            `;
+
+            if (headlineText) {
+                html += `<div class="headline-box"><strong>【見出し】</strong><br>${headlineText.replace(/\n/g, '<br>')}</div>`;
+            }
+
+            const bodyEl = xmlDoc.querySelector('Body');
+            if (!bodyEl) throw new Error("Body node not found.");
+
+            let contentFound = false;
+
+            // --- 1. 津波情報 (Tsunami) ---
+            const tsunamiEl = bodyEl.querySelector('Tsunami');
+            if (tsunamiEl) {
+                contentFound = true;
+                html += `<div class="info-section section-tsunami"><h3>🌊 津波情報</h3>`;
+                
+                const forecasts = tsunamiEl.querySelectorAll('Forecast > Item');
+                if (forecasts.length > 0) {
+                    html += `<h4>予報・警報（予想）</h4>
+                    <table><tr><th style="width: 25%;">予報区</th><th style="width: 20%;">警報種別</th><th style="width: 30%;">到達予想時刻 / 状況</th><th>予想される高さ</th></tr>`;
+                    forecasts.forEach(item => {
+                        const areaName = item.querySelector('Area > Name')?.textContent || '-';
+                        const kind = item.querySelector('Category > Kind > Name')?.textContent || '-';
+                        const firstHeight = item.querySelector('FirstHeight');
+                        let arrival = '-';
+                        if (firstHeight) {
+                            const timeStr = firstHeight.querySelector('ArrivalTime')?.textContent;
+                            const condition = firstHeight.querySelector('Condition')?.textContent;
+                            if (timeStr) arrival = formatTime(timeStr);
+                            else if (condition) arrival = condition;
+                        }
+                        const heightDesc = getHeightDesc(item.querySelector('MaxHeight'));
+                        html += `<tr><td>${areaName}</td><td><strong>${kind}</strong></td><td>${arrival}</td><td>${heightDesc}</td></tr>`;
+                    });
+                    html += `</table>`;
+                }
+
+                const observations = tsunamiEl.querySelectorAll('Observation > Item');
+                if (observations.length > 0) {
+                    html += `<h4>観測情報（実績）</h4>
+                    <table><tr><th style="width: 20%;">観測地域</th><th style="width: 25%;">観測所</th><th style="width: 25%;">観測時刻</th><th>観測された最大波</th></tr>`;
+                    observations.forEach(item => {
+                        const areaName = item.querySelector('Area > Name')?.textContent || '-';
+                        item.querySelectorAll('Station').forEach(station => {
+                            const stName = station.querySelector('Name')?.textContent || '-';
+                            const obsTime = formatTime(station.querySelector('Time')?.textContent);
+                            const heightDesc = getHeightDesc(station.querySelector('MaxHeight'));
+                            html += `<tr><td>${areaName}</td><td>${stName}</td><td>${obsTime}</td><td>${heightDesc}</td></tr>`;
+                        });
+                    });
+                    html += `</table>`;
+                }
+                html += `</div>`;
+            }
+
+            // --- 2. 地震情報 (Earthquake / Intensity) ---
+            const earthquakeEl = bodyEl.querySelector('Earthquake');
+            const intensityEl = bodyEl.querySelector('Intensity');
+            if (earthquakeEl || intensityEl) {
+                contentFound = true;
+                html += `<div class="info-section section-earthquake"><h3>📳 地震情報</h3>`;
+                
+                if (earthquakeEl) {
+                    const originTime = formatTime(earthquakeEl.querySelector('OriginTime')?.textContent);
+                    const hypoArea = earthquakeEl.querySelector('Hypocenter > Area > Name')?.textContent || '不明';
+                    const coordNode = earthquakeEl.querySelector('Hypocenter > Area > Coordinate, Hypocenter > Area > jmx_eb\\:Coordinate'); // Namespace対策
+                    const coordDesc = coordNode ? (coordNode.getAttribute('description') || '情報なし') : '情報なし';
+                    const magNode = earthquakeEl.querySelector('Magnitude, jmx_eb\\:Magnitude');
+                    const mag = magNode ? (magNode.getAttribute('description') || `M${magNode.textContent}`) : '情報なし';
+                    
+                    html += `
+                    <div style="background: white; padding: 10px; border: 1px solid var(--border); border-radius: 4px; margin-bottom: 15px;">
+                        <strong>発生時刻:</strong> ${originTime} <br>
+                        <strong>震央地名:</strong> ${hypoArea} <br>
+                        <strong>深さ・座標:</strong> ${coordDesc} <br>
+                        <strong>規模(マグニチュード):</strong> <span style="font-size: 1.1em; color: #c53030; font-weight: bold;">${mag}</span>
+                    </div>`;
+                }
+
+                if (intensityEl) {
+                    const maxInt = intensityEl.querySelector('Observation > MaxInt')?.textContent;
+                    if (maxInt) {
+                        html += `<p style="font-size: 1.1em;"><strong>最大震度:</strong> <span style="font-size: 1.3em; color: #c53030; font-weight: bold;">${maxInt}</span></p>`;
+                    }
+
+                    const prefs = intensityEl.querySelectorAll('Pref');
+                    if (prefs.length > 0) {
+                        html += `<h4>各地の観測震度</h4><div class="data-list">`;
+                        prefs.forEach(pref => {
+                            const prefName = pref.querySelector('Name')?.textContent || '不明';
+                            const prefMaxInt = pref.querySelector('MaxInt')?.textContent || '-';
+                            html += `<div style="margin-bottom: 10px;"><strong>${prefName} (最大震度 ${prefMaxInt})</strong>`;
+                            
+                            const areas = pref.querySelectorAll('Area');
+                            if(areas.length > 0) {
+                                html += `<ul style="margin: 3px 0 0 20px; padding: 0; list-style-type: none;">`;
+                                areas.forEach(area => {
+                                    const areaName = area.querySelector('Name')?.textContent;
+                                    const areaInt = area.querySelector('MaxInt')?.textContent;
+                                    html += `<li>・${areaName} (震度 ${areaInt})</li>`;
+                                });
+                                html += `</ul>`;
+                            }
+                            html += `</div>`;
+                        });
+                        html += `</div>`;
+                    }
+                }
+                html += `</div>`;
+            }
+
+            // --- 3. 火山情報 (Volcano) ---
+            const volcanoContent = bodyEl.querySelector('VolcanoInfoContent');
+            const ashInfos = bodyEl.querySelector('AshInfos');
+            if (volcanoContent || ashInfos) {
+                contentFound = true;
+                html += `<div class="info-section section-volcano"><h3>🌋 火山情報</h3>`;
+                
+                if (volcanoContent) {
+                    const vHeadline = volcanoContent.querySelector('VolcanoHeadline')?.textContent;
+                    const vActivity = volcanoContent.querySelector('VolcanoActivity')?.textContent;
+                    const vPrevention = volcanoContent.querySelector('VolcanoPrevention')?.textContent;
+                    
+                    if(vHeadline) html += `<h4>対象火山・警戒レベル等</h4><p style="white-space:pre-wrap; line-height: 1.5;">${vHeadline}</p>`;
+                    if(vActivity) html += `<h4>火山活動の状況</h4><div class="data-list"><p style="white-space:pre-wrap; margin:0;">${vActivity}</p></div>`;
+                    if(vPrevention) html += `<h4>防災上の警戒事項等</h4><p style="white-space:pre-wrap; line-height: 1.5;">${vPrevention}</p>`;
+                }
+                
+                if (ashInfos) {
+                    html += `<h4>降灰予報</h4><div class="data-list">`;
+                    const ashItems = ashInfos.querySelectorAll('AshInfo');
+                    ashItems.forEach(ash => {
+                        const type = ash.getAttribute('type') || '予報';
+                        const startTime = formatTime(ash.querySelector('StartTime')?.textContent);
+                        const endTime = formatTime(ash.querySelector('EndTime')?.textContent);
+                        
+                        html += `<div style="margin-bottom: 15px;"><strong>${type} (${startTime} ～ ${endTime})</strong><ul>`;
+                        const items = ash.querySelectorAll('Item');
+                        items.forEach(item => {
+                            const kindName = item.querySelector('Kind > Name')?.textContent;
+                            const areas = Array.from(item.querySelectorAll('Areas > Area > Name')).map(n => n.textContent).join('、 ');
+                            html += `<li><strong>${kindName}</strong>: ${areas || '対象地域なし'}</li>`;
+                        });
+                        html += `</ul></div>`;
+                    });
+                    html += `</div>`;
+                }
+                html += `</div>`;
+            }
+
+            // --- 4. 警報・注意報 (Warning) ---
+            const warnings = bodyEl.querySelectorAll('Warning');
+            if (warnings.length > 0) {
+                contentFound = true;
+                html += `<div class="info-section section-warning"><h3>⚠️ 気象警報・注意報情報</h3>`;
+                warnings.forEach(warn => {
+                    const type = warn.getAttribute('type') || '情報';
+                    html += `<h4>${type}</h4><div class="data-list">`;
+                    const items = warn.querySelectorAll('Item');
+                    
+                    items.forEach(item => {
+                        const areaName = item.querySelector('Area > Name')?.textContent || '対象地域不明';
+                        const kinds = item.querySelectorAll('Kind');
+                        let kindTexts = [];
+                        
+                        kinds.forEach(kind => {
+                            const name = kind.querySelector('Name')?.textContent;
+                            const status = kind.querySelector('Status')?.textContent; // "発表", "解除", "継続" など
+                            
+                            if (name && status) {
+                                let style = status === '解除' ? 'color: #718096;' : 'font-weight: bold; color: #c53030;';
+                                kindTexts.push(`<span style="${style}">${name} (${status})</span>`);
+                            } else if (name) {
+                                kindTexts.push(`<strong>${name}</strong>`);
+                            } else if (status) {
+                                kindTexts.push(`<span>${status}</span>`);
+                            }
+                        });
+                        
+                        if (kindTexts.length > 0) {
+                            html += `<div style="border-bottom: 1px dashed #cbd5e0; padding: 8px 0;"><strong>${areaName}</strong>: ${kindTexts.join('、 ')}</div>`;
+                        }
+                    });
+                    html += `</div>`;
+                });
+                html += `</div>`;
+            }
+
+            // --- 5. 天気予報・警報級の可能性など (MeteorologicalInfos) ---
+            const metInfos = bodyEl.querySelectorAll('MeteorologicalInfos');
+            if (metInfos.length > 0) {
+                contentFound = true;
+                html += `<div class="info-section section-meteorology"><h3>🌤 気象情報（天気予報・警報級の可能性）</h3>`;
+                metInfos.forEach(met => {
+                    const type = met.getAttribute('type') || '予報';
+                    html += `<h4>${type}</h4>`;
+                    
+                    const timeSeriesList = met.querySelectorAll('TimeSeriesInfo');
+                    timeSeriesList.forEach(ts => {
+                        const items = ts.querySelectorAll('Item');
+                        if (items.length > 0) {
+                            html += `<div class="data-list" style="margin-bottom: 15px;">`;
+                            items.forEach(item => {
+                                const areaName = item.querySelector('Area > Name, Station > Name')?.textContent || '地域不明';
+                                html += `<div style="margin-bottom: 10px;"><strong>📍 ${areaName}</strong><ul style="margin-top: 5px;">`;
+                                
+                                const kinds = item.querySelectorAll('Kind');
+                                kinds.forEach(kind => {
+                                    const propType = kind.querySelector('Property > Type')?.textContent || '種別不明';
+                                    
+                                    // 1. Text要素による自由記述がある場合 (警報級の可能性など)
+                                    const textNode = kind.querySelector('Property > Text');
+                                    if (textNode) {
+                                        html += `<li><strong>${propType}:</strong> ${textNode.textContent}</li>`;
+                                        return; // TextがあればSentence処理はスキップ
+                                    }
+
+                                    // 2. Sentence要素がある場合 (天気予報文など)
+                                    const sentences = Array.from(kind.querySelectorAll('Property > DetailForecast > * > Sentence'))
+                                                        .map(s => s.textContent.trim()).filter(t => t);
+                                    if (sentences.length > 0) {
+                                        html += `<li><strong>${propType}:</strong> ${sentences.join(' / ')}</li>`;
+                                        return;
+                                    }
+
+                                    // 3. 上記以外の属性値 (気温、降水確率など、description属性を持つ要素群を拾う)
+                                    const descElements = kind.querySelectorAll('Property *[description]');
+                                    if (descElements.length > 0) {
+                                        const vals = Array.from(descElements).map(el => el.getAttribute('description'));
+                                        html += `<li><strong>${propType}:</strong> ${vals.join(', ')}</li>`;
+                                    }
+                                });
+                                html += `</ul></div>`;
+                            });
+                            html += `</div>`;
+                        }
+                    });
+                });
+                html += `</div>`;
+            }
+
+            // --- 6. 汎用 Area フォールバック (上記のいずれにも該当しないデータ向け) ---
+            if (!contentFound && xmlDoc.querySelector('Body > Earthquake, Body > Intensity') === null) {
+                const genericAreas = Array.from(xmlDoc.querySelectorAll('Area'));
+                if (genericAreas.length > 0) {
+                    html += `<div class="info-section"><h3>その他の地域情報</h3><table><tr><th>地域名</th><th>詳細</th></tr>`;
+                    genericAreas.slice(0, 30).forEach(area => {
+                        const name = area.querySelector('Name')?.textContent || "不明";
+                        const detail = area.querySelector('MaxInt')?.textContent || 
+                                     area.querySelector('Kind > Name')?.textContent || "-";
+                        html += `<tr><td>${name}</td><td>${detail}</td></tr>`;
+                    });
+                    html += `</table>`;
+                    if (genericAreas.length > 30) html += `<p><small>※他 ${genericAreas.length - 30} 件は省略されました。</small></p>`;
+                    html += `</div>`;
+                }
+            }
+
+            // --- 7. コメント (Comments) ---
+            const comments = bodyEl.querySelector('Comments');
+            if (comments) {
+                const texts = Array.from(comments.querySelectorAll('Text')).map(t => t.textContent);
+                if (texts.length > 0) {
+                    html += `<div class="info-section" style="background:#f7fafc;">
+                        <h4 style="margin-top:0;">📝 付加事項・コメント</h4>
+                        <p style="margin:0; line-height: 1.6;">${texts.join('<br>')}</p>
+                    </div>`;
+                }
+            }
+
+            contentEl.innerHTML = html;
+            statusEl.textContent = "解析完了";
+        } catch (e) {
+            console.error(e);
+            statusEl.textContent = "詳細解析エラー";
+            contentEl.innerHTML = `<div style="color:red; padding:20px;">XMLのパースまたはネットワーク取得に失敗しました。<br><small>${e.message}</small></div>`;
+        }
+    }
+
+    // 初期起動
+    loadFeed();
+</script>
+
+</body>
+</html>
