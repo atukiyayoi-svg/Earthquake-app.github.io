@@ -286,7 +286,7 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 #lpgmDesc { font-size: 12px; color: #ddd; text-align: center; padding: 4px 10px; line-height: 1.4; font-weight: bold; }
 
 /* --- XMLパネル --- */
-#xmlPanel { height: 200px; display: flex; flex-direction: column; }
+#xmlPanel { height: 280px; display: flex; flex-direction: column; }
 .xmlHeader { background: rgba(255,255,255,0.1); padding: 4px 10px; font-size: 12px; font-weight: bold; color: #00ff00; border-bottom: 1px solid rgba(255,255,255,0.2); }
 #xmlScrollArea { flex: 1; overflow-y: auto; transition: opacity 0.8s ease-in-out; }
 #xmlScrollArea::-webkit-scrollbar { display: none; }
@@ -296,17 +296,22 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 }
 #btnXmlDetail:hover { background: #00cc00; }
 
-/* --- 南海トラフ地震臨時情報パネル --- */
-#nankaiPanel { height: 180px; display: none; flex-direction: column; }
-.nankaiHeader { background: rgba(255,255,255,0.1); padding: 4px 10px; font-size: 12px; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.2); color: #ff5555; }
-#nankaiScrollArea { width: 100%; height: calc(100% - 25px); overflow-y: auto; transition: opacity 0.8s ease-in-out; }
-#nankaiScrollArea::-webkit-scrollbar { display: none; }
+/* --- XML詳細用 CSS (p.html準拠・ダークモード対応) --- */
+.xml-info-section { background: rgba(30,30,30,0.8); border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 4px; margin-bottom: 10px; }
+.xml-info-section h3 { margin: 0 0 10px 0; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 5px; font-size: 14px; }
+.xml-info-section h4 { margin: 10px 0 5px 0; color: #00ffcc; font-size: 13px; }
+.xml-data-list { max-height: 200px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); padding: 5px 10px; border-radius: 4px; background: rgba(0,0,0,0.3); font-size: 12px; }
+.xml-data-list ul { margin: 5px 0 10px 0; padding-left: 15px; }
+.xml-table { width: 100%; border-collapse: collapse; margin-top: 5px; margin-bottom: 5px; font-size: 12px; }
+.xml-table th, .xml-table td { border: 1px solid rgba(255,255,255,0.2); padding: 4px 8px; text-align: left; }
+.xml-table th { background: rgba(255,255,255,0.1); color: #ccc; }
 
-/* --- 北海道・三陸沖後発地震注意情報パネル --- */
-#hokkaidoPanel { height: 180px; display: none; flex-direction: column; }
-.hokkaidoHeader { background: rgba(255,255,255,0.1); padding: 4px 10px; font-size: 12px; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.2); color: #00aaff; }
-#hokkaidoScrollArea { width: 100%; height: calc(100% - 25px); overflow-y: auto; transition: opacity 0.8s ease-in-out; }
-#hokkaidoScrollArea::-webkit-scrollbar { display: none; }
+/* --- 特別警報・臨時情報パネル --- */
+#nankaiPanel, #sanrikuPanel { display: none; flex-direction: column; max-height: 250px; }
+.mega-quake-header { background: rgba(255,0,255,0.2); padding: 4px 10px; font-size: 12px; font-weight: bold; color: #ff66ff; border-bottom: 1px solid rgba(255,255,255,0.2); }
+#sanrikuPanel .mega-quake-header { background: rgba(0,170,255,0.2); color: #00ccff; }
+.mega-quake-scroll { flex: 1; overflow-y: auto; transition: opacity 0.8s ease-in-out; }
+.mega-quake-scroll::-webkit-scrollbar { display: none; }
 
 /* --- AXIS API 情報ウィンドウ --- */
 #dailySummaryPanel { height: 120px; display: none; }
@@ -483,14 +488,14 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
         <button id="btnXmlDetail">詳細を見る</button>
     </div>
     
-    <div id="nankaiPanel" class="base-panel" style="border-top: 4px solid #ff5555;">
-        <div class="nankaiHeader">南海トラフ地震臨時情報等 (NANKAI TROUGH INFO)</div>
-        <div id="nankaiScrollArea" class="axisScrollArea"></div>
+    <div id="nankaiPanel" class="base-panel" style="border-top: 4px solid #ff00ff;">
+        <div class="mega-quake-header">南海トラフ地震関連情報 (NANKAI TROUGH INFO)</div>
+        <div id="nankaiScrollArea" class="mega-quake-scroll"></div>
     </div>
-    
-    <div id="hokkaidoPanel" class="base-panel" style="border-top: 4px solid #00aaff;">
-        <div class="hokkaidoHeader">北海道・三陸沖後発地震注意情報</div>
-        <div id="hokkaidoScrollArea" class="axisScrollArea"></div>
+
+    <div id="sanrikuPanel" class="base-panel" style="border-top: 4px solid #00aaff;">
+        <div class="mega-quake-header">北海道・三陸沖後発地震注意情報 (SANRIKU-OKI INFO)</div>
+        <div id="sanrikuScrollArea" class="mega-quake-scroll"></div>
     </div>
     
     <div id="shakeDetectPanel" class="base-panel" style="border-top: 4px solid #00ff00; height: 120px; display: none;">
@@ -655,6 +660,8 @@ body{margin:0;background:#050505;overflow:hidden;font-family: "Helvetica Neue", 
 /* ================= グローバルステート & ユーザー設定 ================= */
 window.latestFullQuakeList = [];
 window.eewOriginalTextList = [];
+window.activeNankaiInfos = {};
+window.activeSanrikuInfos = {};
 let wasTsunamiActive = false; // 津波警報・注意報が発表中だったかを判定するフラグ
 
 const defaultSettings = {
@@ -680,7 +687,7 @@ const defaultSettings = {
     customShindoColors: false,
     shindoColors: {
         "1": "#f2f2ff", "2": "#0000ff", "3": "#00c800", "4": "#fae600",
-        "5弱": "#ff9900", "5強": "#ff2800", "6弱": "#fa0000", "6强": "#a00000", "7": "#960096"
+        "5弱": "#ff9900", "5強": "#ff2800", "6弱": "#fa0000", "6強": "#a00000", "7": "#960096"
     }
 };
 
@@ -1255,6 +1262,42 @@ function formatTimeXml(isoStr) {
     return `${month}月${day}日 ${hour}:${min}`;
 }
 
+function getHeightDescXml(parentEl) {
+    if (!parentEl) return '-';
+    const targetNode = parentEl.firstElementChild || parentEl; 
+    return targetNode.getAttribute('description') || targetNode.textContent.trim();
+}
+
+function handleSpecialInfoXml(xmlDoc, title, reportTime, headlineText, bodyEl, targetDict, panelId, scrollAreaId) {
+    const infoType = xmlDoc.querySelector('Head > InfoType')?.textContent;
+    
+    if (infoType === "取消") {
+        for (let prop in targetDict) delete targetDict[prop];
+    } else {
+        let h = `<div style="font-weight:bold; margin-bottom:5px; font-size:14px; color:currentColor;">${title} <span style="color:#aaa; font-size:12px; font-weight:normal;">(${reportTime})</span></div>`;
+        if (headlineText) {
+            h += `<div style="margin-bottom:8px; padding:8px; background:rgba(255,255,255,0.1); border-left:4px solid currentColor; font-weight:bold; font-size:13px;">${headlineText.replace(/\n/g, '<br>')}</div>`;
+        }
+        const comments = bodyEl?.querySelector('Comments');
+        if (comments) {
+            const texts = Array.from(comments.querySelectorAll('Text')).map(t => t.textContent).join('<br><br>');
+            h += `<div style="font-size:13px; line-height:1.5;">${texts}</div>`;
+        }
+        targetDict[reportTime] = h;
+    }
+
+    const panel = document.getElementById(panelId);
+    const keys = Object.keys(targetDict).sort((a,b) => new Date(b).getTime() - new Date(a).getTime());
+    
+    if (keys.length > 0) {
+        panel.style.display = "flex";
+        let fullHtml = keys.map(k => targetDict[k]).join('<hr style="border:0; border-top:1px dashed rgba(255,255,255,0.3); margin:15px 0;">');
+        updatePanelScroll(scrollAreaId, fullHtml);
+    } else {
+        panel.style.display = "none";
+    }
+}
+
 async function processXmlUrl(url) {
     try {
         const res = await fetch(url);
@@ -1278,49 +1321,18 @@ async function processXmlUrl(url) {
             handleTsunamiXml(xmlDoc, headlineText);
         }
 
-        // --- 南海トラフ地震臨時情報 / 関連解説情報 ---
-        if (title.includes("南海トラフ地震臨時情報") || title.includes("南海トラフ地震関連解説情報")) {
-            let panel = document.getElementById('nankaiPanel');
-            if(panel) panel.style.display = 'flex';
-            let keywordText = "";
-            if (headlineText.includes("巨大地震警戒")) keywordText = "<span style='color:#ff0000; font-weight:bold; font-size:16px; background:#fff; padding:2px 4px; display:inline-block; margin-bottom:5px;'>【巨大地震警戒】</span><br>";
-            else if (headlineText.includes("巨大地震注意")) keywordText = "<span style='color:#ffff00; font-weight:bold; font-size:16px; background:#333; padding:2px 4px; display:inline-block; margin-bottom:5px;'>【巨大地震注意】</span><br>";
-            else if (headlineText.includes("調査中")) keywordText = "<span style='color:#ffaa00; font-weight:bold; font-size:16px; background:#333; padding:2px 4px; display:inline-block; margin-bottom:5px;'>【調査中】</span><br>";
-            else if (headlineText.includes("調査終了")) keywordText = "<span style='color:#00ff00; font-weight:bold; font-size:16px; background:#333; padding:2px 4px; display:inline-block; margin-bottom:5px;'>【調査終了】</span><br>";
-
-            let bodyText = bodyEl?.querySelector('Text')?.textContent || "";
-            if (!bodyText) {
-                const commentsNode = bodyEl?.querySelector('Comments');
-                if (commentsNode) bodyText = Array.from(commentsNode.querySelectorAll('Text')).map(t => t.textContent).join('<br>');
-            }
-
-            let contentHtml = `<div class="info-title">${title} <small>${reportTime}</small></div>
-                               <div class="info-text">${keywordText}<span style="color:#ffcccc; font-weight:bold;">${headlineText.replace(/\n/g, '<br>')}</span><br><br>${bodyText.replace(/\n/g, '<br>')}</div>`;
-            updatePanelScroll("nankaiScrollArea", contentHtml);
-            
-            // 重要情報として自動スクロール・音声対応などを追加可能
-            if(title.includes("南海トラフ地震臨時情報")) playPippiBeep();
+        // --- 南海トラフ / 北海道・三陸沖 特別情報 ---
+        const isNankai = title.includes("南海トラフ地震臨時情報") || title.includes("南海トラフ地震関連解説情報");
+        const isSanriku = title.includes("北海道・三陸沖後発地震注意情報");
+        
+        if (isNankai) {
+            handleSpecialInfoXml(xmlDoc, title, reportTime, headlineText, bodyEl, window.activeNankaiInfos, "nankaiPanel", "nankaiScrollArea");
+        }
+        if (isSanriku) {
+            handleSpecialInfoXml(xmlDoc, title, reportTime, headlineText, bodyEl, window.activeSanrikuInfos, "sanrikuPanel", "sanrikuScrollArea");
         }
 
-        // --- 北海道・三陸沖後発地震注意情報 ---
-        if (title.includes("北海道・三陸沖後発地震注意情報")) {
-            let panel = document.getElementById('hokkaidoPanel');
-            if(panel) panel.style.display = 'flex';
-            
-            let bodyText = bodyEl?.querySelector('Text')?.textContent || "";
-            if (!bodyText) {
-                const commentsNode = bodyEl?.querySelector('Comments');
-                if (commentsNode) bodyText = Array.from(commentsNode.querySelectorAll('Text')).map(t => t.textContent).join('<br>');
-            }
-
-            let contentHtml = `<div class="info-title">${title} <small>${reportTime}</small></div>
-                               <div class="info-text" style="color:#ffaa00; font-weight:bold;">${headlineText.replace(/\n/g, '<br>')}</div>
-                               <div class="info-text" style="margin-top:10px;">${bodyText.replace(/\n/g, '<br>')}</div>`;
-            updatePanelScroll("hokkaidoScrollArea", contentHtml);
-            playPippiBeep();
-        }
-
-        // --- XMLパネルへの詳細な汎用表示 ---
+        // --- XMLパネルへの汎用・詳細表示 ---
         let html = `
             <div style="border-bottom: 2px solid rgba(255,255,255,0.2); margin-bottom: 15px; padding-bottom: 10px;">
                 <div class="info-title" style="color: #00ff00; font-size: 16px !important;">${title}</div>
@@ -1328,60 +1340,58 @@ async function processXmlUrl(url) {
             </div>
         `;
         if (headlineText) {
-            html += `<div style="background: rgba(255,255,0,0.1); border: 1px solid rgba(255,255,0,0.3); padding: 10px; margin-bottom: 15px; font-weight: bold; font-size: 13px; line-height:1.4;">${headlineText.replace(/\n/g, '<br>')}</div>`;
+            html += `<div style="background: rgba(255,255,0,0.1); border: 1px solid rgba(255,255,0,0.3); padding: 10px; margin-bottom: 15px; font-weight: bold; font-size: 13px;">${headlineText.replace(/\n/g, '<br>')}</div>`;
         }
 
         let contentFound = false;
 
-        // 1. 津波 (Tsunami)
+        // 1. 津波情報 (Tsunami)
         const tsunamiEl = bodyEl?.querySelector('Tsunami');
         if (tsunamiEl) {
             contentFound = true;
-            html += `<div style="margin-bottom: 15px;"><div style="color:#00ffff; font-weight:bold; border-bottom:1px dashed #00ffff; margin-bottom:5px; padding-bottom:3px;">🌊 津波情報</div>`;
+            html += `<div class="xml-info-section"><h3 style="color:#00ffff;">🌊 津波情報</h3>`;
             const forecasts = tsunamiEl.querySelectorAll('Forecast > Item');
             if (forecasts.length > 0) {
-                html += `<div style="font-size:13px; color:#aaa; margin-top:8px;">[予報・警報]</div><ul style="margin:5px 0; padding-left:20px; font-size:13px; line-height:1.4;">`;
+                html += `<h4>予報・警報（予想）</h4><table class="xml-table"><tr><th>予報区</th><th>警報種別</th><th>到達予想時刻 / 状況</th><th>予想される高さ</th></tr>`;
                 forecasts.forEach(item => {
                     const areaName = item.querySelector('Area > Name')?.textContent || '-';
                     const kind = item.querySelector('Category > Kind > Name')?.textContent || '-';
-                    let arrival = '-';
                     const firstHeight = item.querySelector('FirstHeight');
-                    if(firstHeight) {
+                    let arrival = '-';
+                    if (firstHeight) {
                         const timeStr = firstHeight.querySelector('ArrivalTime')?.textContent;
                         const condition = firstHeight.querySelector('Condition')?.textContent;
-                        if(timeStr) arrival = formatTimeXml(timeStr);
+                        if (timeStr) arrival = formatTimeXml(timeStr);
                         else if (condition) arrival = condition;
                     }
-                    const maxHeightNode = item.querySelector('MaxHeight > jmx_eb\\:TsunamiHeight') || item.querySelector('MaxHeight > TsunamiHeight');
-                    const heightDesc = maxHeightNode ? (maxHeightNode.getAttribute('description') || maxHeightNode.textContent) : '-';
-                    html += `<li><strong style="color:#fff;">${areaName}</strong>: <span style="color:#ffaa00;">${kind}</span><br>到達: ${arrival} / 高さ: ${heightDesc}</li>`;
+                    const heightDesc = getHeightDescXml(item.querySelector('MaxHeight'));
+                    html += `<tr><td>${areaName}</td><td><strong>${kind}</strong></td><td>${arrival}</td><td>${heightDesc}</td></tr>`;
                 });
-                html += `</ul>`;
+                html += `</table>`;
             }
             const observations = tsunamiEl.querySelectorAll('Observation > Item');
             if (observations.length > 0) {
-                html += `<div style="font-size:13px; color:#aaa; margin-top:8px;">[観測情報]</div><ul style="margin:5px 0; padding-left:20px; font-size:13px; line-height:1.4;">`;
+                html += `<h4>観測情報（実績）</h4><table class="xml-table"><tr><th>観測地域</th><th>観測所</th><th>観測時刻</th><th>観測された最大波</th></tr>`;
                 observations.forEach(item => {
                     const areaName = item.querySelector('Area > Name')?.textContent || '-';
                     item.querySelectorAll('Station').forEach(station => {
                         const stName = station.querySelector('Name')?.textContent || '-';
                         const obsTime = formatTimeXml(station.querySelector('Time')?.textContent);
-                        const maxHeightNode = station.querySelector('MaxHeight > jmx_eb\\:TsunamiHeight') || station.querySelector('MaxHeight > TsunamiHeight');
-                        const heightDesc = maxHeightNode ? (maxHeightNode.getAttribute('description') || maxHeightNode.textContent) : '-';
-                        html += `<li><strong style="color:#fff;">${stName} (${areaName})</strong><br>観測: ${obsTime} / 最大波: ${heightDesc}</li>`;
+                        const heightDesc = getHeightDescXml(station.querySelector('MaxHeight'));
+                        html += `<tr><td>${areaName}</td><td>${stName}</td><td>${obsTime}</td><td>${heightDesc}</td></tr>`;
                     });
                 });
-                html += `</ul>`;
+                html += `</table>`;
             }
             html += `</div>`;
         }
 
-        // 2. 地震 (Earthquake / Intensity)
+        // 2. 地震情報 (Earthquake / Intensity)
         const earthquakeEl = bodyEl?.querySelector('Earthquake');
         const intensityEl = bodyEl?.querySelector('Intensity');
         if (earthquakeEl || intensityEl) {
             contentFound = true;
-            html += `<div style="margin-bottom: 15px;"><div style="color:#ffaa00; font-weight:bold; border-bottom:1px dashed #ffaa00; margin-bottom:5px; padding-bottom:3px;">📳 地震情報</div>`;
+            html += `<div class="xml-info-section"><h3 style="color:#ffaa00;">📳 地震情報</h3>`;
             if (earthquakeEl) {
                 const originTime = formatTimeXml(earthquakeEl.querySelector('OriginTime')?.textContent);
                 const hypoArea = earthquakeEl.querySelector('Hypocenter > Area > Name')?.textContent || '不明';
@@ -1389,29 +1399,35 @@ async function processXmlUrl(url) {
                 const coordDesc = coordNode ? (coordNode.getAttribute('description') || '情報なし') : '情報なし';
                 const magNode = earthquakeEl.querySelector('Magnitude, jmx_eb\\:Magnitude');
                 const mag = magNode ? (magNode.getAttribute('description') || `M${magNode.textContent}`) : '情報なし';
-                html += `<div style="font-size:13px; margin-bottom:10px; background:rgba(255,255,255,0.05); padding:8px; border-radius:4px;">
-                    発生時刻: ${originTime}<br>
-                    震央地名: ${hypoArea}<br>
-                    深さ・座標: ${coordDesc}<br>
-                    規模: <span style="color:#ff4444; font-weight:bold;">${mag}</span>
+                html += `<div style="background: rgba(255,255,255,0.05); padding: 10px; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; margin-bottom: 15px;">
+                    <strong>発生時刻:</strong> ${originTime} <br>
+                    <strong>震央地名:</strong> ${hypoArea} <br>
+                    <strong>深さ・座標:</strong> ${coordDesc} <br>
+                    <strong>規模(マグニチュード):</strong> <span style="font-size: 1.1em; color: #ff4444; font-weight: bold;">${mag}</span>
                 </div>`;
             }
             if (intensityEl) {
                 const maxInt = intensityEl.querySelector('Observation > MaxInt')?.textContent;
-                if (maxInt) html += `<div style="font-size:14px; font-weight:bold; color:#ff4444; margin-bottom:8px;">最大震度: ${maxInt}</div>`;
+                if (maxInt) html += `<p style="font-size: 1.1em;"><strong>最大震度:</strong> <span style="font-size: 1.3em; color: #ff4444; font-weight: bold;">${maxInt}</span></p>`;
+                
                 const prefs = intensityEl.querySelectorAll('Pref');
                 if (prefs.length > 0) {
-                    html += `<div style="max-height:150px; overflow-y:auto; border:1px solid rgba(255,255,255,0.2); padding:5px; font-size:12px; background:rgba(0,0,0,0.3);">`;
+                    html += `<h4>各地の観測震度</h4><div class="xml-data-list">`;
                     prefs.forEach(pref => {
                         const prefName = pref.querySelector('Name')?.textContent || '不明';
                         const prefMaxInt = pref.querySelector('MaxInt')?.textContent || '-';
-                        html += `<div style="margin-bottom: 5px;"><strong style="color:#00ffcc;">${prefName} (最大震度 ${prefMaxInt})</strong><ul style="margin:2px 0 5px 15px; padding:0; list-style:none;">`;
-                        pref.querySelectorAll('Area').forEach(area => {
-                            const areaName = area.querySelector('Name')?.textContent;
-                            const areaInt = area.querySelector('MaxInt')?.textContent;
-                            html += `<li>・${areaName} (震度 ${areaInt})</li>`;
-                        });
-                        html += `</ul></div>`;
+                        html += `<div style="margin-bottom: 10px;"><strong>${prefName} (最大震度 ${prefMaxInt})</strong>`;
+                        const areas = pref.querySelectorAll('Area');
+                        if(areas.length > 0) {
+                            html += `<ul style="list-style-type: none; margin: 3px 0 0 10px; padding: 0;">`;
+                            areas.forEach(area => {
+                                const areaName = area.querySelector('Name')?.textContent;
+                                const areaInt = area.querySelector('MaxInt')?.textContent;
+                                html += `<li>・${areaName} (震度 ${areaInt})</li>`;
+                            });
+                            html += `</ul>`;
+                        }
+                        html += `</div>`;
                     });
                     html += `</div>`;
                 }
@@ -1419,55 +1435,59 @@ async function processXmlUrl(url) {
             html += `</div>`;
         }
 
-        // 3. 火山 (Volcano)
+        // 3. 火山情報 (Volcano)
         const volcanoContent = bodyEl?.querySelector('VolcanoInfoContent');
         const ashInfos = bodyEl?.querySelector('AshInfos');
         if (volcanoContent || ashInfos) {
             contentFound = true;
-            html += `<div style="margin-bottom: 15px;"><div style="color:#ff8c00; font-weight:bold; border-bottom:1px dashed #ff8c00; margin-bottom:5px; padding-bottom:3px;">🌋 火山情報</div>`;
+            html += `<div class="xml-info-section"><h3 style="color:#ff8800;">🌋 火山情報</h3>`;
             if (volcanoContent) {
                 const vHeadline = volcanoContent.querySelector('VolcanoHeadline')?.textContent;
                 const vActivity = volcanoContent.querySelector('VolcanoActivity')?.textContent;
                 const vPrevention = volcanoContent.querySelector('VolcanoPrevention')?.textContent;
-                if(vHeadline) html += `<div style="font-size:12px; color:#aaa; margin-top:5px;">[対象火山・警戒レベル等]</div><div style="font-size:13px; line-height:1.4; white-space:pre-wrap;">${vHeadline}</div>`;
-                if(vActivity) html += `<div style="font-size:12px; color:#aaa; margin-top:5px;">[火山活動の状況]</div><div style="font-size:13px; line-height:1.4; white-space:pre-wrap;">${vActivity}</div>`;
-                if(vPrevention) html += `<div style="font-size:12px; color:#aaa; margin-top:5px;">[防災上の警戒事項等]</div><div style="font-size:13px; line-height:1.4; white-space:pre-wrap;">${vPrevention}</div>`;
+                if(vHeadline) html += `<h4>対象火山・警戒レベル等</h4><p style="white-space:pre-wrap;">${vHeadline}</p>`;
+                if(vActivity) html += `<h4>火山活動の状況</h4><div class="xml-data-list"><p style="white-space:pre-wrap; margin:0;">${vActivity}</p></div>`;
+                if(vPrevention) html += `<h4>防災上の警戒事項等</h4><p style="white-space:pre-wrap;">${vPrevention}</p>`;
             }
             if (ashInfos) {
-                html += `<div style="font-size:12px; color:#aaa; margin-top:5px;">[降灰予報]</div><ul style="margin:5px 0; padding-left:15px; font-size:12px; line-height:1.4;">`;
-                ashInfos.querySelectorAll('AshInfo').forEach(ash => {
+                html += `<h4>降灰予報</h4><div class="xml-data-list">`;
+                const ashItems = ashInfos.querySelectorAll('AshInfo');
+                ashItems.forEach(ash => {
                     const type = ash.getAttribute('type') || '予報';
                     const startTime = formatTimeXml(ash.querySelector('StartTime')?.textContent);
                     const endTime = formatTimeXml(ash.querySelector('EndTime')?.textContent);
-                    html += `<li style="margin-bottom:5px;"><strong>${type} (${startTime} ～ ${endTime})</strong><ul style="padding-left:15px;">`;
-                    ash.querySelectorAll('Item').forEach(item => {
+                    html += `<div style="margin-bottom: 10px;"><strong>${type} (${startTime} ～ ${endTime})</strong><ul>`;
+                    const items = ash.querySelectorAll('Item');
+                    items.forEach(item => {
                         const kindName = item.querySelector('Kind > Name')?.textContent;
                         const areas = Array.from(item.querySelectorAll('Areas > Area > Name')).map(n => n.textContent).join('、 ');
                         html += `<li><strong>${kindName}</strong>: ${areas || '対象地域なし'}</li>`;
                     });
-                    html += `</ul></li>`;
+                    html += `</ul></div>`;
                 });
-                html += `</ul>`;
+                html += `</div>`;
             }
             html += `</div>`;
         }
 
-        // 4. 気象警報等 (Warning)
+        // 4. 気象警報・注意報情報 (Warning)
         const warnings = bodyEl?.querySelectorAll('Warning');
         if (warnings && warnings.length > 0) {
             contentFound = true;
-            html += `<div style="margin-bottom: 15px;"><div style="color:#ff4444; font-weight:bold; border-bottom:1px dashed #ff4444; margin-bottom:5px; padding-bottom:3px;">⚠️ 気象警報・注意報情報</div>`;
+            html += `<div class="xml-info-section"><h3 style="color:#ff3366;">⚠️ 気象警報・注意報情報</h3>`;
             warnings.forEach(warn => {
                 const type = warn.getAttribute('type') || '情報';
-                html += `<div style="font-size:13px; color:#aaa; margin-top:5px;">[${type}]</div><div style="max-height:150px; overflow-y:auto; border:1px solid rgba(255,255,255,0.2); padding:5px; font-size:12px; background:rgba(0,0,0,0.3); line-height:1.4;">`;
-                warn.querySelectorAll('Item').forEach(item => {
+                html += `<h4>${type}</h4><div class="xml-data-list">`;
+                const items = warn.querySelectorAll('Item');
+                items.forEach(item => {
                     const areaName = item.querySelector('Area > Name')?.textContent || '対象地域不明';
+                    const kinds = item.querySelectorAll('Kind');
                     let kindTexts = [];
-                    item.querySelectorAll('Kind').forEach(kind => {
+                    kinds.forEach(kind => {
                         const name = kind.querySelector('Name')?.textContent;
-                        const status = kind.querySelector('Status')?.textContent;
+                        const status = kind.querySelector('Status')?.textContent; 
                         if (name && status) {
-                            let style = status === '解除' ? 'color: #888;' : 'font-weight: bold; color: #ff6666;';
+                            let style = status === '解除' ? 'color: #888;' : 'font-weight: bold; color: #ff5555;';
                             kindTexts.push(`<span style="${style}">${name} (${status})</span>`);
                         } else if (name) {
                             kindTexts.push(`<strong>${name}</strong>`);
@@ -1476,7 +1496,7 @@ async function processXmlUrl(url) {
                         }
                     });
                     if (kindTexts.length > 0) {
-                        html += `<div style="border-bottom: 1px dashed rgba(255,255,255,0.2); padding: 4px 0;"><strong style="color:#fff;">${areaName}</strong>: ${kindTexts.join('、 ')}</div>`;
+                        html += `<div style="border-bottom: 1px dashed rgba(255,255,255,0.2); padding: 5px 0;"><strong>${areaName}</strong>: ${kindTexts.join('、 ')}</div>`;
                     }
                 });
                 html += `</div>`;
@@ -1484,37 +1504,40 @@ async function processXmlUrl(url) {
             html += `</div>`;
         }
 
-        // 5. 天気予報等 (MeteorologicalInfos)
+        // 5. 気象情報（天気予報・警報級の可能性） (MeteorologicalInfos)
         const metInfos = bodyEl?.querySelectorAll('MeteorologicalInfos');
         if (metInfos && metInfos.length > 0) {
             contentFound = true;
-            html += `<div style="margin-bottom: 15px;"><div style="color:#68d391; font-weight:bold; border-bottom:1px dashed #68d391; margin-bottom:5px; padding-bottom:3px;">🌤 気象情報（天気予報・警報級の可能性）</div>`;
+            html += `<div class="xml-info-section"><h3 style="color:#33cc66;">🌤 気象情報</h3>`;
             metInfos.forEach(met => {
                 const type = met.getAttribute('type') || '予報';
-                html += `<div style="font-size:13px; color:#aaa; margin-top:5px;">[${type}]</div>`;
-                met.querySelectorAll('TimeSeriesInfo').forEach(ts => {
+                html += `<h4>${type}</h4>`;
+                const timeSeriesList = met.querySelectorAll('TimeSeriesInfo');
+                timeSeriesList.forEach(ts => {
                     const items = ts.querySelectorAll('Item');
                     if (items.length > 0) {
-                        html += `<div style="max-height:150px; overflow-y:auto; border:1px solid rgba(255,255,255,0.2); padding:5px; font-size:12px; background:rgba(0,0,0,0.3); line-height:1.4; margin-bottom:5px;">`;
+                        html += `<div class="xml-data-list" style="margin-bottom: 10px;">`;
                         items.forEach(item => {
                             const areaName = item.querySelector('Area > Name, Station > Name')?.textContent || '地域不明';
-                            html += `<div style="margin-bottom: 8px;"><strong style="color:#00ffcc;">📍 ${areaName}</strong><ul style="margin: 2px 0 0 15px; padding:0; list-style:none;">`;
-                            item.querySelectorAll('Kind').forEach(kind => {
+                            html += `<div style="margin-bottom: 5px;"><strong>📍 ${areaName}</strong><ul style="margin-top: 3px;">`;
+                            const kinds = item.querySelectorAll('Kind');
+                            kinds.forEach(kind => {
                                 const propType = kind.querySelector('Property > Type')?.textContent || '種別不明';
                                 const textNode = kind.querySelector('Property > Text');
                                 if (textNode) {
-                                    html += `<li><span style="color:#aaa;">${propType}:</span> ${textNode.textContent}</li>`;
-                                } else {
-                                    const sentences = Array.from(kind.querySelectorAll('Property > DetailForecast > * > Sentence')).map(s => s.textContent.trim()).filter(t => t);
-                                    if (sentences.length > 0) {
-                                        html += `<li><span style="color:#aaa;">${propType}:</span> ${sentences.join(' / ')}</li>`;
-                                    } else {
-                                        const descElements = kind.querySelectorAll('Property *[description]');
-                                        if (descElements.length > 0) {
-                                            const vals = Array.from(descElements).map(el => el.getAttribute('description'));
-                                            html += `<li><span style="color:#aaa;">${propType}:</span> ${vals.join(', ')}</li>`;
-                                        }
-                                    }
+                                    html += `<li><strong>${propType}:</strong> ${textNode.textContent}</li>`;
+                                    return;
+                                }
+                                const sentences = Array.from(kind.querySelectorAll('Property > DetailForecast > * > Sentence'))
+                                                    .map(s => s.textContent.trim()).filter(t => t);
+                                if (sentences.length > 0) {
+                                    html += `<li><strong>${propType}:</strong> ${sentences.join(' / ')}</li>`;
+                                    return;
+                                }
+                                const descElements = kind.querySelectorAll('Property *[description]');
+                                if (descElements.length > 0) {
+                                    const vals = Array.from(descElements).map(el => el.getAttribute('description'));
+                                    html += `<li><strong>${propType}:</strong> ${vals.join(', ')}</li>`;
                                 }
                             });
                             html += `</ul></div>`;
@@ -1526,19 +1549,19 @@ async function processXmlUrl(url) {
             html += `</div>`;
         }
 
-        // 6. Generic Fallback
-        if (!contentFound && !bodyEl?.querySelector('Earthquake, Intensity')) {
-            const genericAreas = Array.from(xmlDoc.querySelectorAll('Area'));
+        // 6. 汎用 Area フォールバック
+        if (!contentFound && !bodyEl?.querySelector('Earthquake') && !bodyEl?.querySelector('Intensity')) {
+            const genericAreas = Array.from(xmlDoc.querySelectorAll('Body > Area'));
             if (genericAreas.length > 0) {
-                html += `<div style="margin-bottom: 15px;"><div style="color:#aaa; font-weight:bold; border-bottom:1px dashed #aaa; margin-bottom:5px; padding-bottom:3px;">その他の地域情報</div>`;
-                html += `<div style="max-height:150px; overflow-y:auto; border:1px solid rgba(255,255,255,0.2); padding:5px; font-size:12px; background:rgba(0,0,0,0.3); line-height:1.4;">`;
+                html += `<div class="xml-info-section"><h3>その他の地域情報</h3><table class="xml-table"><tr><th>地域名</th><th>詳細</th></tr>`;
                 genericAreas.slice(0, 30).forEach(area => {
                     const name = area.querySelector('Name')?.textContent || "不明";
                     const detail = area.querySelector('MaxInt')?.textContent || area.querySelector('Kind > Name')?.textContent || "-";
-                    html += `<div><strong style="color:#fff;">${name}</strong>: ${detail}</div>`;
+                    html += `<tr><td>${name}</td><td>${detail}</td></tr>`;
                 });
-                if (genericAreas.length > 30) html += `<div style="color:#888;">※他 ${genericAreas.length - 30} 件省略</div>`;
-                html += `</div></div>`;
+                html += `</table>`;
+                if (genericAreas.length > 30) html += `<p><small>※他 ${genericAreas.length - 30} 件は省略されました。</small></p>`;
+                html += `</div>`;
             }
         }
 
@@ -1547,9 +1570,9 @@ async function processXmlUrl(url) {
         if (comments) {
             const texts = Array.from(comments.querySelectorAll('Text')).map(t => t.textContent);
             if (texts.length > 0) {
-                html += `<div style="margin-bottom: 15px; background:rgba(255,255,255,0.1); padding:8px; border-radius:4px;">
-                    <div style="color:#00ffcc; font-weight:bold; font-size:13px; margin-bottom:4px;">📝 付加事項・コメント</div>
-                    <div style="font-size:12px; line-height: 1.5; white-space:pre-wrap;">${texts.join('<br>')}</div>
+                html += `<div class="xml-info-section" style="background: rgba(255,255,255,0.05);">
+                    <h4 style="margin-top:0;">📝 付加事項・コメント</h4>
+                    <p style="margin:0; line-height: 1.5; white-space:pre-wrap;">${texts.join('\n')}</p>
                 </div>`;
             }
         }
@@ -3474,4 +3497,20 @@ document.addEventListener("DOMContentLoaded", () => {
     
     document.getElementById("btnStart").addEventListener("click", () => {
         document.getElementById("startupScreen").style.display = "none";
-        initAudio
+        initAudio(); 
+    });
+    
+    document.getElementById("btnSiyou").addEventListener("click", () => {
+        const modal = document.getElementById("siyouModal");
+        document.getElementById("siyouIframe").src = "siyou.html";
+        modal.style.display = "flex";
+    });
+    
+    document.getElementById("btnCloseSiyou").addEventListener("click", () => {
+        document.getElementById("siyouModal").style.display = "none";
+        document.getElementById("siyouIframe").src = "";
+    });
+});
+</script>
+</body>
+</html>
