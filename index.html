@@ -1487,7 +1487,7 @@ async function processXmlUrl(url) {
                         const name = kind.querySelector('Name')?.textContent;
                         const status = kind.querySelector('Status')?.textContent; 
                         if (name && status) {
-                            let style = status === '解除' ? 'color: #004FD2;' : 'font-weight: bold; color: #ff5555;';
+                            let style = status === '解除' ? 'color: #00F4D2;' : 'font-weight: bold; color: #ff5555;';
                             kindTexts.push(`<span style="${style}">${name} (${status})</span>`);
                         } else if (name) {
                             kindTexts.push(`<strong>${name}</strong>`);
