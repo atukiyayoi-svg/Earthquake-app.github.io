@@ -20,6 +20,8 @@
             --warn-border: #fecdd3;
             --met-bg: #f0fdf4;
             --met-border: #bbf7d0;
+            --notice-bg: #ebfbfa;
+            --notice-border: #81e6d9;
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -52,7 +54,7 @@
         .info-section { background: white; border: 1px solid var(--border); padding: 15px 20px; border-radius: 6px; margin-bottom: 20px; }
         .info-section h3 { margin: 0 0 15px 0; border-bottom: 2px solid var(--border); padding-bottom: 8px; }
         .info-section h4 { margin: 15px 0 5px 0; color: var(--primary); }
-        .data-list { max-height: 250px; overflow-y: auto; border: 1px solid var(--border); padding: 10px 15px; border-radius: 4px; background: #fafafa; font-size: 0.95em; }
+        .data-list { max-height: 400px; overflow-y: auto; border: 1px solid var(--border); padding: 10px 15px; border-radius: 4px; background: #fafafa; font-size: 0.95em; }
         .data-list ul { margin: 5px 0 15px 0; padding-left: 20px; }
         
         /* カテゴリ別カラー設定 */
@@ -66,6 +68,8 @@
         .section-warning h3 { color: #e53e3e; border-color: #fc8181; }
         .section-meteorology { background-color: var(--met-bg); border-color: var(--met-border); }
         .section-meteorology h3 { color: #276749; border-color: #68d391; }
+        .section-notice { background-color: var(--notice-bg); border-color: var(--notice-border); }
+        .section-notice h3 { color: #234e52; border-color: #4fd1c5; }
 
         /* テーブルスタイル */
         table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 10px; font-size: 0.95em; background: white; }
@@ -111,7 +115,7 @@
 </div>
 
 <script>
-    // CORS回避用プロキシ（ローカル環境テスト時などは適宜設定してください。例: 'https://corsproxy.io/?' ）
+    // CORS回避用プロキシ（ローカル環境テスト時などは適宜設定してください）
     const PROXY = ''; 
 
     // 時刻フォーマット補助関数
@@ -131,6 +135,66 @@
         if (!parentEl) return '-';
         const targetNode = parentEl.firstElementChild || parentEl; 
         return targetNode.getAttribute('description') || targetNode.textContent.trim();
+    }
+
+    // 汎用プロパティ値抽出関数
+    function extractPropertyValues(propEl) {
+        const vals = [];
+        
+        // 1. Text or Sentence (自由記述の抽出)
+        const texts = Array.from(propEl.querySelectorAll('Text, Sentence'))
+                           .map(n => n.textContent.trim())
+                           .filter(t => t);
+        if (texts.length > 0) return texts;
+
+        // 2. descriptionやcondition属性の抽出
+        const descNodes = propEl.querySelectorAll('*[description], *[condition]');
+        if (descNodes.length > 0) {
+            descNodes.forEach(n => {
+                const desc = n.getAttribute('description') || n.getAttribute('condition');
+                if (desc && !vals.includes(desc)) vals.push(desc);
+            });
+        }
+
+        // 3. Significancy や Category などの名前と種別の抽出 (危険度分布などに使用)
+        const sigNodes = Array.from(propEl.querySelectorAll('Significancy, Category'));
+        if (sigNodes.length > 0) {
+            sigNodes.forEach(n => {
+                const type = n.getAttribute('type') || '';
+                const nameNode = n.querySelector(':scope > Name, Kind > Name');
+                const name = nameNode ? nameNode.textContent.trim() : '';
+                if (name) {
+                    const val = type ? `[${type}] ${name}` : name;
+                    if (!vals.includes(val)) vals.push(val);
+                }
+            });
+        }
+
+        // 4. 上記で抽出できない場合の各種観測/予想値の抽出 (等圧線、低気圧情報など)
+        if (vals.length === 0) {
+            Array.from(propEl.querySelectorAll('*')).forEach(node => {
+                const tag = (node.localName || node.tagName).replace(/jmx_eb:/g, ''); // ns除去
+                const isTarget = ['Pressure', 'Temperature', 'WindSpeed', 'WindDirection', 'WaveHeight', 'WindDegree', 'Coordinate', 'Line', 'Speed', 'Direction'].some(t => tag.includes(t));
+                
+                if (isTarget) {
+                    if (node.textContent.trim() && !node.children.length) {
+                        let unit = node.getAttribute('unit') ? ` ${node.getAttribute('unit')}` : '';
+                        let type = node.getAttribute('type') || '';
+                        let label = type ? `${type}: ` : '';
+                        
+                        const text = node.textContent.trim();
+                        // 巨大な座標データなどの表示省略
+                        if ((tag.includes('Coordinate') || tag.includes('Line')) && text.length > 50) {
+                             vals.push(`${label}座標・ラインデータ`);
+                        } else {
+                             vals.push(`${label}${text}${unit}`);
+                        }
+                    }
+                }
+            });
+        }
+
+        return [...new Set(vals)].filter(v => v);
     }
 
     // 1. Atomフィードの読み込み
@@ -205,6 +269,15 @@
 
             let contentFound = false;
 
+            // --- 0. お知らせ・特記事項 (Notice) ---
+            const notices = Array.from(bodyEl.querySelectorAll(':scope > Notice')).map(n => n.textContent.trim()).filter(t => t);
+            if (notices.length > 0) {
+                html += `<div class="info-section section-notice">
+                    <h3 style="margin-top:0;">ℹ️ お知らせ・特記事項</h3>
+                    <p style="margin:0; line-height: 1.6;">${notices.join('<br>')}</p>
+                </div>`;
+            }
+
             // --- 1. 津波情報 (Tsunami) ---
             const tsunamiEl = bodyEl.querySelector('Tsunami');
             if (tsunamiEl) {
@@ -260,7 +333,7 @@
                 if (earthquakeEl) {
                     const originTime = formatTime(earthquakeEl.querySelector('OriginTime')?.textContent);
                     const hypoArea = earthquakeEl.querySelector('Hypocenter > Area > Name')?.textContent || '不明';
-                    const coordNode = earthquakeEl.querySelector('Hypocenter > Area > Coordinate, Hypocenter > Area > jmx_eb\\:Coordinate'); // Namespace対策
+                    const coordNode = earthquakeEl.querySelector('Hypocenter > Area > Coordinate, Hypocenter > Area > jmx_eb\\:Coordinate');
                     const coordDesc = coordNode ? (coordNode.getAttribute('description') || '情報なし') : '情報なし';
                     const magNode = earthquakeEl.querySelector('Magnitude, jmx_eb\\:Magnitude');
                     const mag = magNode ? (magNode.getAttribute('description') || `M${magNode.textContent}`) : '情報なし';
@@ -362,16 +435,30 @@
                         
                         kinds.forEach(kind => {
                             const name = kind.querySelector('Name')?.textContent;
-                            const status = kind.querySelector('Status')?.textContent; // "発表", "解除", "継続" など
+                            const status = kind.querySelector('Status')?.textContent; 
                             
+                            // 付随するプロパティ(風速、波高など)の抽出
+                            const props = kind.querySelectorAll('Property');
+                            let propVals = [];
+                            props.forEach(p => {
+                                propVals.push(...extractPropertyValues(p));
+                            });
+
+                            let kindStr = '';
                             if (name && status) {
                                 let style = status === '解除' ? 'color: #718096;' : 'font-weight: bold; color: #c53030;';
-                                kindTexts.push(`<span style="${style}">${name} (${status})</span>`);
+                                kindStr = `<span style="${style}">${name} (${status})</span>`;
                             } else if (name) {
-                                kindTexts.push(`<strong>${name}</strong>`);
+                                kindStr = `<strong>${name}</strong>`;
                             } else if (status) {
-                                kindTexts.push(`<span>${status}</span>`);
+                                kindStr = `<span>${status}</span>`;
                             }
+
+                            if (propVals.length > 0) {
+                                kindStr += ` <small style="color:#718096;">[${propVals.join(', ')}]</small>`;
+                            }
+                            
+                            if (kindStr) kindTexts.push(kindStr);
                         });
                         
                         if (kindTexts.length > 0) {
@@ -383,55 +470,80 @@
                 html += `</div>`;
             }
 
-            // --- 5. 天気予報・警報級の可能性など (MeteorologicalInfos) ---
+            // --- 5. 天気予報・気象情報・天気図等 (MeteorologicalInfos) ---
             const metInfos = bodyEl.querySelectorAll('MeteorologicalInfos');
             if (metInfos.length > 0) {
                 contentFound = true;
-                html += `<div class="info-section section-meteorology"><h3>🌤 気象情報（天気予報・警報級の可能性）</h3>`;
+                html += `<div class="info-section section-meteorology"><h3>🌤 気象・予報・危険度情報</h3>`;
                 metInfos.forEach(met => {
-                    const type = met.getAttribute('type') || '予報';
+                    const type = met.getAttribute('type') || '気象情報';
                     html += `<h4>${type}</h4>`;
                     
-                    const timeSeriesList = met.querySelectorAll('TimeSeriesInfo');
-                    timeSeriesList.forEach(ts => {
-                        const items = ts.querySelectorAll('Item');
+                    const infoBlocks = met.querySelectorAll('TimeSeriesInfo, MeteorologicalInfo');
+                    if (infoBlocks.length > 0) {
+                        infoBlocks.forEach(info => {
+                            const timeNode = info.querySelector('TimeDefine > DateTime, DateTime');
+                            const timeStr = timeNode ? formatTime(timeNode.textContent) : '';
+                            
+                            const items = info.querySelectorAll('Item');
+                            if (items.length > 0) {
+                                html += `<div class="data-list" style="margin-bottom: 15px;">`;
+                                if (timeStr) html += `<div style="color:var(--accent); font-weight:bold; margin-bottom: 5px;">対象時刻/期間: ${timeStr}</div>`;
+                                
+                                items.forEach(item => {
+                                    const areaName = item.querySelector('Area > Name, Station > Name')?.textContent;
+                                    html += `<div style="margin-bottom: 10px; border-bottom: 1px solid #edf2f7; padding-bottom: 8px;">`;
+                                    if (areaName) html += `<strong style="font-size:1.05em; color:var(--primary);">📍 ${areaName}</strong>`;
+                                    
+                                    const kinds = item.querySelectorAll('Kind');
+                                    if (kinds.length > 0) {
+                                        html += `<ul style="margin-top: 5px;">`;
+                                        kinds.forEach(kind => {
+                                            const kindName = kind.querySelector(':scope > Name')?.textContent;
+                                            const props = kind.querySelectorAll('Property');
+                                            
+                                            if (props.length === 0 && kindName) {
+                                                html += `<li><strong>種別:</strong> ${kindName}</li>`;
+                                            } else {
+                                                props.forEach(prop => {
+                                                    const propType = prop.querySelector('Type')?.textContent || kindName || '情報';
+                                                    const vals = extractPropertyValues(prop);
+                                                    if (vals.length > 0) {
+                                                        html += `<li><strong>${propType}:</strong> ${vals.join(' / ')}</li>`;
+                                                    }
+                                                });
+                                            }
+                                        });
+                                        html += `</ul>`;
+                                    }
+                                    html += `</div>`;
+                                });
+                                html += `</div>`;
+                            }
+                        });
+                    } else {
+                        // Fallback: Items directly under MeteorologicalInfos (less common but possible)
+                        const items = met.querySelectorAll(':scope > Item');
                         if (items.length > 0) {
                             html += `<div class="data-list" style="margin-bottom: 15px;">`;
                             items.forEach(item => {
-                                const areaName = item.querySelector('Area > Name, Station > Name')?.textContent || '地域不明';
+                                const areaName = item.querySelector('Area > Name, Station > Name')?.textContent || '対象不明';
                                 html += `<div style="margin-bottom: 10px;"><strong>📍 ${areaName}</strong><ul style="margin-top: 5px;">`;
-                                
                                 const kinds = item.querySelectorAll('Kind');
                                 kinds.forEach(kind => {
-                                    const propType = kind.querySelector('Property > Type')?.textContent || '種別不明';
-                                    
-                                    // 1. Text要素による自由記述がある場合 (警報級の可能性など)
-                                    const textNode = kind.querySelector('Property > Text');
-                                    if (textNode) {
-                                        html += `<li><strong>${propType}:</strong> ${textNode.textContent}</li>`;
-                                        return; // TextがあればSentence処理はスキップ
-                                    }
-
-                                    // 2. Sentence要素がある場合 (天気予報文など)
-                                    const sentences = Array.from(kind.querySelectorAll('Property > DetailForecast > * > Sentence'))
-                                                        .map(s => s.textContent.trim()).filter(t => t);
-                                    if (sentences.length > 0) {
-                                        html += `<li><strong>${propType}:</strong> ${sentences.join(' / ')}</li>`;
-                                        return;
-                                    }
-
-                                    // 3. 上記以外の属性値 (気温、降水確率など、description属性を持つ要素群を拾う)
-                                    const descElements = kind.querySelectorAll('Property *[description]');
-                                    if (descElements.length > 0) {
-                                        const vals = Array.from(descElements).map(el => el.getAttribute('description'));
-                                        html += `<li><strong>${propType}:</strong> ${vals.join(', ')}</li>`;
-                                    }
+                                    kind.querySelectorAll('Property').forEach(prop => {
+                                        const propType = prop.querySelector('Type')?.textContent || '情報';
+                                        const vals = extractPropertyValues(prop);
+                                        if (vals.length > 0) {
+                                            html += `<li><strong>${propType}:</strong> ${vals.join(', ')}</li>`;
+                                        }
+                                    });
                                 });
                                 html += `</ul></div>`;
                             });
                             html += `</div>`;
                         }
-                    });
+                    }
                 });
                 html += `</div>`;
             }
