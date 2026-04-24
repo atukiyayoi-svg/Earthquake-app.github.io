@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -1010,13 +1011,15 @@ let xmlTsunamiGeojsonLayer = null;
 
 let lastFeedUpdateEqvol = 0;
 let lastFeedUpdateExtra = 0;
+let lastFeedUpdateEqvolL = 0; // 追加
 let xmlBuffer = { eqvol: [], extra: [] };
 let warnBuffer = { extra: [] }; 
 
 async function pollJmaXml() {
     const feeds = [
         { url: 'https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml', type: 'eqvol' },
-        { url: 'https://www.data.jma.go.jp/developer/xml/feed/extra.xml', type: 'extra' }
+        { url: 'https://www.data.jma.go.jp/developer/xml/feed/extra.xml', type: 'extra' },
+        { url: 'https://www.data.jma.go.jp/developer/xml/feed/eqvol_l.xml', type: 'eqvol_l' } // 長期フィード追加
     ];
     let isUpdated = false;
 
@@ -1028,7 +1031,10 @@ async function pollJmaXml() {
             if (entries.length === 0) continue;
 
             let newestUpdatedTime = new Date(entries[0].querySelector('updated').textContent).getTime();
-            let lastUpdate = f.type === 'eqvol' ? lastFeedUpdateEqvol : lastFeedUpdateExtra;
+            let lastUpdate = 0;
+            if (f.type === 'eqvol') lastUpdate = lastFeedUpdateEqvol;
+            else if (f.type === 'extra') lastUpdate = lastFeedUpdateExtra;
+            else if (f.type === 'eqvol_l') lastUpdate = lastFeedUpdateEqvolL;
 
             let targetEntries = entries.filter(e => new Date(e.querySelector('updated').textContent).getTime() > lastUpdate);
 
@@ -1036,10 +1042,20 @@ async function pollJmaXml() {
                 targetEntries.reverse(); // Process oldest first
 
                 if (f.type === 'eqvol') lastFeedUpdateEqvol = newestUpdatedTime;
-                else lastFeedUpdateExtra = newestUpdatedTime;
+                else if (f.type === 'extra') lastFeedUpdateExtra = newestUpdatedTime;
+                else if (f.type === 'eqvol_l') lastFeedUpdateEqvolL = newestUpdatedTime;
 
                 for (let entry of targetEntries) {
                     let url = entry.querySelector('link').getAttribute('href');
+                    let title = entry.querySelector('title')?.textContent || "";
+
+                    if (f.type === 'eqvol_l') {
+                        // 長期フィードからは指定の特定情報のみを処理
+                        const isNankai = title.includes("南海トラフ地震臨時情報") || title.includes("南海トラフ地震関連解説情報");
+                        const isSanriku = title.includes("北海道・三陸沖後発地震注意情報");
+                        if (!isNankai && !isSanriku) continue;
+                    }
+
                     if (!processedXmlUrls.has(url)) {
                         processedXmlUrls.add(url);
                         await processXmlUrl(url, f.type);
@@ -1087,6 +1103,7 @@ async function processXmlString(xmlText, type, overrideUrl = null) {
 
         if (title === "顕著な地震の震源要素更新のお知らせ") handleHypocenterUpdateXml(xmlDoc);
         if (infoKind === "津波警報・注意報・予報a" || title.includes("津波")) handleTsunamiXml(xmlDoc, headlineText);
+        
         const isNankai = title.includes("南海トラフ地震臨時情報") || title.includes("南海トラフ地震関連解説情報");
         const isSanriku = title.includes("北海道・三陸沖後発地震注意情報");
         if (isNankai) handleSpecialInfoXml(xmlDoc, title, reportTime, headlineText, bodyEl, window.activeNankaiInfos, "nankaiPanel", "nankaiScrollArea");
@@ -1279,12 +1296,11 @@ async function processXmlString(xmlText, type, overrideUrl = null) {
             }
         }
         
-        if (type === 'eqvol') {
+        // eqvol_l からの情報も総合パネルに表示する
+        if (type === 'eqvol' || type === 'eqvol_l') {
             xmlBuffer.eqvol.unshift(html);
             xmlBuffer.eqvol = xmlBuffer.eqvol.slice(0, 15);
         } else if (type === 'extra') {
-            // Append only if it is not purely weather warnings (which are routed to warnBuffer)
-            // But sometimes extra has general info, we push it unless it's just empty warnings
             if (contentFound || comments || html.includes('その他の地域情報')) {
                 xmlBuffer.extra.unshift(html);
                 xmlBuffer.extra = xmlBuffer.extra.slice(0, 15);
@@ -1311,12 +1327,22 @@ async function processXmlUrl(url, type) {
 
 function handleSpecialInfoXml(xmlDoc, title, reportTime, headlineText, bodyEl, targetDict, panelId, scrollAreaId) {
     const infoType = xmlDoc.querySelector('Head > InfoType')?.textContent;
-    if (infoType === "取消") { for (let prop in targetDict) delete targetDict[prop]; } 
-    else {
+    if (infoType === "取消") { 
+        for (let prop in targetDict) delete targetDict[prop]; 
+    } else {
         let h = `<div style="font-weight:bold; margin-bottom:5px; font-size:14px; color:currentColor;">${title} <span style="color:#aaa; font-size:12px; font-weight:normal;">(${reportTime})</span></div>`;
         if (headlineText) { h += `<div style="margin-bottom:8px; padding:8px; background:rgba(255,255,255,0.1); border-left:4px solid currentColor; font-weight:bold; font-size:13px;">${headlineText.replace(/\n/g, '<br>')}</div>`; }
-        const comments = bodyEl?.querySelector('Comments');
-        if (comments) { const texts = Array.from(comments.querySelectorAll('Text')).map(t => t.textContent).join('<br><br>'); h += `<div style="font-size:13px; line-height:1.5;">${texts}</div>`; }
+        
+        // 本文（EarthquakeInfo > Text）や参考（Appendix）、コメントを抽出
+        let textHtml = "";
+        const textNodes = bodyEl?.querySelectorAll('EarthquakeInfo > Text, EarthquakeInfo > Appendix, Comments > Text');
+        if (textNodes && textNodes.length > 0) {
+            textHtml = Array.from(textNodes).map(t => t.textContent.trim()).filter(t => t).join('\n\n');
+        }
+        if (textHtml) { 
+            h += `<div style="font-size:13px; line-height:1.5; white-space:pre-wrap;">${textHtml}</div>`; 
+        }
+
         targetDict[reportTime] = h;
     }
     const panel = document.getElementById(panelId); const keys = Object.keys(targetDict).sort((a,b) => new Date(b).getTime() - new Date(a).getTime());
