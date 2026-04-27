@@ -425,7 +425,6 @@ body { margin:0; background:#0f1115; overflow:hidden; font-family: "BIZ UDPGothi
 
 <script type="module">
 window.latestFullQuakeList = []; window.eewOriginalTextList = []; let megaQuakeStatus = { nankai: null, sanriku: null }; let wasTsunamiActive = false; let seaLevelChangeContinues = false;
-window.xmlQuakeHistory = [];
 window.lpgmDataMap = new Map();
 
 const defaultSettings = {
@@ -582,6 +581,21 @@ function renderXmlPanels(){
 }
 function kanjiToNumber(s){const m={'〇':0,'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十':10}; let r=0; for(let i=0;i<s.length;i++){let n=m[s[i]]; if(n!==undefined){if(n===10)r+=(r===0?1:0)*10;else r+=n;}else{let c=s.charCodeAt(i); if(c>=0xFF10&&c<=0xFF19)r=r*10+(c-0xFF10); else if(c>=0x30&&c<=0x39)r=r*10+(c-0x30);}} return r>0?r:1;}
 
+let eqUpdateTimeout = null;
+function handleHypocenterUpdateXml(doc){
+    const eq=doc.querySelector('Body > Earthquake'); if(!eq)return; const oR=eq.querySelector('OriginTime')?.textContent; if(!oR)return; const oObj=new Date(oR), hA=eq.querySelector('Hypocenter > Area > Name')?.textContent, mN=eq.querySelector('Magnitude, jmx_eb\\:Magnitude'), nM=mN?parseFloat(mN.textContent):-1, cN=eq.querySelector('Hypocenter > Area > Coordinate, jmx_eb\\:Coordinate'); let nD=-1; if(cN&&cN.getAttribute('description')){let m=cN.getAttribute('description').match(/深さ(\d+)km/); if(m)nD=parseInt(m[1]); else if(cN.getAttribute('description').includes("ごく浅い"))nD=0;}
+    let trg=null, mn=1000000; for(let q of currentQuakeList){let d=Math.abs(new Date(q.earthquake.time.replace(/\//g,"-").replace(" ","T"))-oObj); if(d<mn){mn=d; trg=q;}}
+    let oS="不明", oM="不明", oP=hA, tS=formatTimeXml(oR);
+    if(trg&&mn<300000){oS=fmt.shindo(trg.earthquake.maxScale,trg.earthquake.hypocenter.depth).replace("強","きょう").replace("弱","じゃく"); oM=trg.earthquake.hypocenter.magnitude!==-1?trg.earthquake.hypocenter.magnitude:"不明"; oP=trg.earthquake.hypocenter.name; trg.earthquake.hypocenter.name=hA; trg.earthquake.hypocenter.magnitude=nM; if(nD!==-1)trg.earthquake.hypocenter.depth=nD; renderHistoryPanel();}
+    let nMS=nM!==-1?nM:"不明", nS=doc.querySelector('Body > Intensity > Observation > MaxInt')?.textContent?.replace("強","きょう").replace("弱","じゃく")||oS;
+    const updatePanel = document.getElementById('eqUpdatePanel');
+    document.getElementById('eqUpdateText').innerHTML=`<span style="color:#94a3b8;">発生時刻:</span> ${tS}<br><br><div style="display:flex;justify-content:space-around;align-items:center;background:rgba(0,0,0,0.3);padding:14px;border-radius:10px;"><div><span style="color:#94a3b8;font-size:12px;">[前]</span><br>${oP}<br>震度${oS} / M${oM}</div><div style="font-size:24px;color:#34d399;font-weight:bold;">⇒</div><div><span style="color:#34d399;font-size:12px;">[後]</span><br>${hA}<br>震度${nS} / M${nMS}</div></div>`;
+    updatePanel.style.display='block';
+    if(eqUpdateTimeout) clearTimeout(eqUpdateTimeout);
+    eqUpdateTimeout = setTimeout(() => { updatePanel.style.display = 'none'; }, 60000);
+    seUpdateApi.currentTime=0; seUpdateApi.play().catch(e=>{}); speakText(`先ほど、${tS}ごろ${oP}で発生した最大震度${oS}、マグニチュード${oM}において、最大震度${nS}、マグニチュード${nMS}に更新されました。`);
+}
+
 function handleLpgmXml(doc) {
     const bdy = doc.querySelector('Body');
     const eq = bdy?.querySelector('Earthquake');
@@ -589,8 +603,8 @@ function handleLpgmXml(doc) {
     if(!oR) return;
 
     const obs = bdy?.querySelector('Intensity > Observation');
-    const maxLgInt = obs?.querySelector('MaxLgInt')?.textContent;
-    if (!maxLgInt) return;
+    if (!obs) return;
+    let maxLgInt = obs.querySelector('MaxLgInt')?.textContent;
 
     const lpgmData = { maxLgInt: maxLgInt, areas: {} };
     const areas = obs.querySelectorAll('Pref > Area');
@@ -599,8 +613,13 @@ function handleLpgmXml(doc) {
         const lg = a.querySelector('MaxLgInt')?.textContent;
         if (aN && lg) {
             lpgmData.areas[aN] = lg;
+            if(!maxLgInt || lg > maxLgInt) {
+                maxLgInt = lg;
+                lpgmData.maxLgInt = maxLgInt;
+            }
         }
     });
+    if (!lpgmData.maxLgInt) return;
 
     window.lpgmDataMap.set(oR, lpgmData);
 
@@ -608,7 +627,7 @@ function handleLpgmXml(doc) {
     window.latestFullQuakeList.forEach(q => {
         let qTime = new Date(q.earthquake.time.replace(/\//g, "-").replace(" ", "T")).getTime();
         let xTime = new Date(oR).getTime();
-        if (Math.abs(qTime - xTime) < 60000) { 
+        if (Math.abs(qTime - xTime) < 300000) { 
             q.earthquake.maxLpgmInt = maxLgInt;
             if (q.points) {
                 q.points.forEach(pt => {
@@ -626,7 +645,7 @@ function handleLpgmXml(doc) {
         if (window.currentEarthquakeData) {
             let cTime = new Date(window.currentEarthquakeData.time.replace(/\//g, "-").replace(" ", "T")).getTime();
             let xTime = new Date(oR).getTime();
-            if (Math.abs(cTime - xTime) < 60000) {
+            if (Math.abs(cTime - xTime) < 300000) {
                 const wrap = document.querySelector('.latestWrap .latestLeft > div:last-child');
                 if (wrap && !wrap.querySelector('.lpgm-tag')) {
                     const tag = document.createElement('span');
@@ -642,7 +661,7 @@ function handleLpgmXml(doc) {
             let activeQ = selectedHistoryQuake || { earthquake: window.currentEarthquakeData, points: window.currentEarthquakePoints, issue: window.currentEarthquakeIssue };
             let aTime = new Date(activeQ.earthquake.time.replace(/\//g, "-").replace(" ", "T")).getTime();
             let xTime = new Date(oR).getTime();
-            if (Math.abs(aTime - xTime) < 60000) {
+            if (Math.abs(aTime - xTime) < 300000) {
                 updateLeafletMap(activeQ.earthquake, activeQ.points, activeQ.issue);
             }
         }
@@ -652,27 +671,6 @@ function handleLpgmXml(doc) {
 async function processXmlString(xt, typ, ovUrl=null){
     try{
         const doc=new DOMParser().parseFromString(xt,"application/xml"), hd=doc.querySelector('Head'), tit=hd?.querySelector('Title')?.textContent||doc.querySelector('Control > Title')?.textContent||"不明", iKind=hd?.querySelector('InfoKind')?.textContent||"", rTime=formatTimeXml(hd?.querySelector('ReportDateTime')?.textContent||doc.querySelector('Control > DateTime')?.textContent), hl=doc.querySelector('Headline > Text')?.textContent||"", bdy=doc.querySelector('Body');
-        
-        // 過去XMLの記録処理
-        const eEl=bdy?.querySelector('Earthquake'), intEl=bdy?.querySelector('Intensity');
-        if(eEl) {
-            const oR=eEl.querySelector('OriginTime')?.textContent;
-            const hA=eEl.querySelector('Hypocenter > Area > Name')?.textContent;
-            const mN=eEl.querySelector('Magnitude, jmx_eb\\:Magnitude');
-            const nM=mN?parseFloat(mN.textContent):-1;
-            const mxInt=intEl?.querySelector('Observation > MaxInt')?.textContent;
-            if(oR) {
-                let idx = window.xmlQuakeHistory.findIndex(x => x.originTime === oR);
-                let qData = { originTime: oR, name: hA, magnitude: nM, maxInt: mxInt };
-                if(idx >= 0) {
-                    if(hA) window.xmlQuakeHistory[idx].name = hA;
-                    if(nM !== -1) window.xmlQuakeHistory[idx].magnitude = nM;
-                    if(mxInt) window.xmlQuakeHistory[idx].maxInt = mxInt;
-                } else {
-                    window.xmlQuakeHistory.push(qData);
-                }
-            }
-        }
 
         if(tit==="顕著な地震の震源要素更新のお知らせ")handleHypocenterUpdateXml(doc); 
         if(iKind==="津波警報・注意報・予報a"||tit.includes("津波"))handleTsunamiXml(doc,hl);
@@ -711,6 +709,7 @@ async function processXmlString(xt, typ, ovUrl=null){
             const ob=tEl.querySelectorAll('Observation > Item'); if(ob.length){ht+=`<h4>観測実績</h4><table class="p-table"><tr><th>地域</th><th>観測所</th><th>時刻</th><th>最大波</th></tr>`; ob.forEach(i=>{const aN=i.querySelector('Area > Name')?.textContent; i.querySelectorAll('Station').forEach(s=>{ht+=`<tr><td>${aN}</td><td>${s.querySelector('Name')?.textContent}</td><td>${formatTimeXml(s.querySelector('Time')?.textContent)}</td><td>${getHeightDescXml(s.querySelector('MaxHeight'))}</td></tr>`;});}); ht+=`</table>`;} ht+=`</div>`;
         }
 
+        const eEl=bdy?.querySelector('Earthquake'), intEl=bdy?.querySelector('Intensity');
         if(eEl||intEl){
             cFnd=true; ht+=`<div class="p-info-section p-section-earthquake"><h3>📳 地震情報</h3>`;
             if(eEl){const cd=eEl.querySelector('Hypocenter > Area > Coordinate, Hypocenter > Area > jmx_eb\\:Coordinate'); ht+=`<div style="background:rgba(0,0,0,0.2); padding:12px; border-radius:8px; margin-bottom:12px;"><strong>発生時刻:</strong> ${formatTimeXml(eEl.querySelector('OriginTime')?.textContent)}<br><strong>震央:</strong> ${eEl.querySelector('Hypocenter > Area > Name')?.textContent}<br><strong>深さ・座標:</strong> ${cd?cd.getAttribute('description'):'不明'}<br><strong>規模:</strong> <span style="font-size:1.1em; color:#f87171; font-weight:700;">${eEl.querySelector('Magnitude, jmx_eb\\:Magnitude')?.getAttribute('description')||'M'+eEl.querySelector('Magnitude')?.textContent}</span></div>`;}
@@ -725,48 +724,6 @@ async function processXmlString(xt, typ, ovUrl=null){
     }catch(e){}
 }
 async function processXmlUrl(u,t){try{const r=await fetch(u); await processXmlString(await r.text(),t,u);}catch(e){}}
-
-function handleHypocenterUpdateXml(doc){
-    const eq=doc.querySelector('Body > Earthquake'); if(!eq)return; 
-    const oR=eq.querySelector('OriginTime')?.textContent; if(!oR)return; 
-    const oObj=new Date(oR), hA=eq.querySelector('Hypocenter > Area > Name')?.textContent, mN=eq.querySelector('Magnitude, jmx_eb\\:Magnitude'), nM=mN?parseFloat(mN.textContent):-1, cN=eq.querySelector('Hypocenter > Area > Coordinate, jmx_eb\\:Coordinate'); 
-    let nD=-1; if(cN&&cN.getAttribute('description')){let m=cN.getAttribute('description').match(/深さ(\d+)km/); if(m)nD=parseInt(m[1]); else if(cN.getAttribute('description').includes("ごく浅い"))nD=0;}
-    
-    let xmlPrev = window.xmlQuakeHistory.find(x => x.originTime === oR);
-    let trg=null, mn=1000; 
-    for(let q of currentQuakeList){
-        let d=Math.abs(new Date(q.earthquake.time.replace(/\//g,"-").replace(" ","T"))-oObj); 
-        if(d<mn){mn=d; trg=q;}
-    }
-
-    let oS="不明", oM="不明", oP=hA, tS=formatTimeXml(oR);
-
-    if(xmlPrev) {
-        oS = xmlPrev.maxInt || oS;
-        oM = xmlPrev.magnitude !== -1 ? xmlPrev.magnitude : "不明";
-        oP = xmlPrev.name || oP;
-    } else if(trg && mn < 300000) {
-        oS = fmt.shindo(trg.earthquake.maxScale, trg.earthquake.hypocenter.depth).replace("強","きょう").replace("弱","じゃく"); 
-        oM = trg.earthquake.hypocenter.magnitude !== -1 ? trg.earthquake.hypocenter.magnitude : "不明"; 
-        oP = trg.earthquake.hypocenter.name; 
-    }
-
-    if(trg && mn < 300000) {
-        trg.earthquake.hypocenter.name = hA; 
-        trg.earthquake.hypocenter.magnitude = nM; 
-        if(nD !== -1) trg.earthquake.hypocenter.depth = nD; 
-        renderHistoryPanel();
-    }
-
-    let nMS=nM!==-1?nM:"不明", nS=doc.querySelector('Body > Intensity > Observation > MaxInt')?.textContent?.replace("強","きょう").replace("弱","じゃく")||oS;
-    
-    const p = document.getElementById('eqUpdatePanel');
-    document.getElementById('eqUpdateText').innerHTML=`<span style="color:#94a3b8;">発生時刻:</span> ${tS}<br><br><div style="display:flex;justify-content:space-around;align-items:center;background:rgba(0,0,0,0.3);padding:16px;border-radius:8px;"><div><span style="color:#94a3b8;font-size:12px;">[変更前]</span><br>${oP}<br>震度${oS} / M${oM}</div><div style="font-size:24px;color:#34d399;">⇒</div><div><span style="color:#34d399;font-size:12px;">[変更後]</span><br>${hA}<br>震度${nS} / M${nMS}</div></div>`;
-    p.style.display = 'block';
-    seUpdateApi.currentTime=0; seUpdateApi.play().catch(e=>{}); speakText(`先ほど、${tS}ごろ${oP}で発生した最大震度${oS}、マグニチュード${oM}において、震源要素が更新されました。最大震度${nS}、マグニチュード${nMS}です。`);
-    
-    setTimeout(() => { p.style.display = 'none'; }, 60000);
-}
 
 function handleTsunamiXml(doc,hl){
     if(hl.includes("すべて解除")){xmlTsunamiData={cancelled:true,areas:[]}; if(wasTsunamiActive){speakText("津波警報、および、津波注意報は、すべて解除されました。"); seUpdateApi.currentTime=0; seUpdateApi.play().catch(e=>{}); wasTsunamiActive=false;}}
@@ -1014,12 +971,11 @@ async function loadQuakes(){
     
     currentQuakeList=ls.filter(x=>x.issue?.type!=="ScalePrompt"&&x.issue?.type!=="Destination"&&x.earthquake.maxScale!==-1&&x.earthquake.maxScale!=="-1").slice(0,30); 
     
-    // LPGMデータの再マージ
     window.latestFullQuakeList.forEach(q => {
         let qTime = new Date(q.earthquake.time.replace(/\//g, "-").replace(" ", "T")).getTime();
         for (let [oR, lpgm] of window.lpgmDataMap.entries()) {
             let xTime = new Date(oR).getTime();
-            if (Math.abs(qTime - xTime) < 60000) {
+            if (Math.abs(qTime - xTime) < 300000) {
                 q.earthquake.maxLpgmInt = lpgm.maxLgInt;
                 if (q.points) {
                     q.points.forEach(pt => {
