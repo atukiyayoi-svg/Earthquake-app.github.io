@@ -10,231 +10,287 @@
 <script src="source/JMAPoints.js"></script>
 
 <style>
-/* --- ユニバーサルデザイン・モダンベース設定 --- */
-@import url('https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap');
-body { margin:0; background:#0f1115; overflow:hidden; font-family: "BIZ UDPGothic", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif; color:#f8fafc; letter-spacing: 0.03em; }
+/* ==========================================================================
+   NHK報道・防災情報風 UIデザイン設定
+   特徴: フラット、角丸なし、透過なし(ソリッド)、高コントラスト、極太ゴシック
+   ========================================================================== */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;700;900&display=swap');
+
+body { 
+    margin: 0; 
+    background: #000000; /* 深い漆黒 */
+    overflow: hidden; 
+    font-family: "Noto Sans JP", "BIZ UDPGothic", "Hiragino Kaku Gothic ProN", sans-serif; 
+    color: #ffffff; 
+    letter-spacing: 0.05em; 
+}
 
 /* --- 起動画面 --- */
-#startupScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0f1115; z-index: 20000; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+#startupScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000000; z-index: 20000; display: flex; align-items: center; justify-content: center; flex-direction: column; border: 4px solid #333; box-sizing: border-box; }
 #startupContent { text-align: center; }
-.loader { border: 6px solid rgba(255, 255, 255, 0.1); border-top: 6px solid #3b82f6; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 0 auto 20px auto; }
+.loader { border: 8px solid #333; border-top: 8px solid #0055aa; border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite; margin: 0 auto 20px auto; }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-#startupStatus { font-size: 16px; color: #cbd5e1; font-weight: 700; margin-bottom: 20px; }
-.app-title { font-size: 42px; font-weight: 700; color: #fff; margin-bottom: 5px; text-shadow: 0 0 20px rgba(59,130,246,0.8); letter-spacing: 0.05em; }
-.app-version { font-size: 16px; color: #34d399; margin-bottom: 40px; letter-spacing: 2px; font-weight: 700; }
+#startupStatus { font-size: 18px; color: #ffffff; font-weight: 700; margin-bottom: 20px; }
+.app-title { font-size: 48px; font-weight: 900; color: #ffffff; margin-bottom: 5px; letter-spacing: 0.1em; }
+.app-version { font-size: 18px; color: #ffff00; margin-bottom: 40px; font-weight: 700; }
 .btn-group { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
-.startup-btn { padding: 14px 36px; font-size: 16px; font-weight: 700; color: #fff; background: rgba(59,130,246,0.8); border: 1px solid #3b82f6; border-radius: 8px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 15px rgba(59,130,246,0.3); }
-.startup-btn:hover { background: #3b82f6; box-shadow: 0 6px 20px rgba(59,130,246,0.6); transform: translateY(-2px); }
+.startup-btn { padding: 14px 48px; font-size: 18px; font-weight: 900; color: #fff; background: #0055aa; border: 2px solid #fff; border-radius: 0; cursor: pointer; transition: background 0.1s; }
+.startup-btn:hover { background: #0077cc; }
 
 /* --- モーダル --- */
-.iframeModal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 85%; height: 85%; background: rgba(15,17,21,0.98); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 20px 40px rgba(0,0,0,0.8); z-index: 21000; border-radius: 12px; display: none; flex-direction: column; overflow: hidden; backdrop-filter: blur(16px); }
-.modalHeader { padding: 16px 20px; font-size: 18px; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); color: #f8fafc; }
-.modalHeader button { background: none; border: none; color: #cbd5e1; font-size: 28px; cursor: pointer; line-height: 1; transition: color 0.2s; }
-.modalHeader button:hover { color: #ef4444; }
-.modalIframe { flex: 1; width: 100%; border: none; background: #0f1115; }
+.iframeModal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; height: 90%; background: #000000; border: 4px solid #fff; z-index: 21000; border-radius: 0; display: none; flex-direction: column; overflow: hidden; }
+.modalHeader { padding: 16px 20px; font-size: 20px; font-weight: 900; border-bottom: 2px solid #555; display: flex; justify-content: space-between; align-items: center; background: #111; color: #fff; }
+.modalHeader button { background: none; border: none; color: #fff; font-size: 32px; font-weight: 900; cursor: pointer; line-height: 1; }
+.modalHeader button:hover { color: #ff0000; }
+.modalIframe { flex: 1; width: 100%; border: none; background: #000; }
 
 /* --- サイドバーコンテナ --- */
-#leftSidebar { position: fixed; top: 12px; left: 12px; bottom: 60px; width: 420px; display: flex; flex-direction: column; gap: 12px; z-index: 100; overflow-y: auto; overflow-x: hidden; pointer-events: none; }
-#rightSidebar { position: fixed; top: 12px; right: 12px; bottom: 12px; width: 380px; display: flex; flex-direction: column; gap: 12px; z-index: 100; overflow-y: auto; overflow-x: hidden; pointer-events: none; }
-#leftSidebar::-webkit-scrollbar, #rightSidebar::-webkit-scrollbar { width: 6px; }
-#leftSidebar::-webkit-scrollbar-thumb, #rightSidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+#leftSidebar { position: fixed; top: 12px; left: 12px; bottom: 60px; width: 420px; display: flex; flex-direction: column; gap: 8px; z-index: 100; overflow-y: auto; overflow-x: hidden; pointer-events: none; }
+#rightSidebar { position: fixed; top: 12px; right: 12px; bottom: 12px; width: 380px; display: flex; flex-direction: column; gap: 8px; z-index: 100; overflow-y: auto; overflow-x: hidden; pointer-events: none; }
+#leftSidebar::-webkit-scrollbar, #rightSidebar::-webkit-scrollbar { width: 8px; }
+#leftSidebar::-webkit-scrollbar-thumb, #rightSidebar::-webkit-scrollbar-thumb { background: #555; border-radius: 0; }
 #leftSidebar > div, #rightSidebar > div { pointer-events: auto; flex-shrink: 0; width: 100%; }
 
-/* --- パネルベースデザイン --- */
-.base-panel { background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; backdrop-filter: blur(12px); box-shadow: 0 8px 24px rgba(0,0,0,0.5); box-sizing: border-box; overflow: hidden; }
+/* --- パネルベースデザイン (フラット・角丸なし) --- */
+.base-panel { 
+    background: #111111; 
+    border: 2px solid #333333; 
+    border-radius: 0; 
+    box-shadow: none; 
+    box-sizing: border-box; 
+    overflow: hidden; 
+}
 
 /* --- 下部パネルコンテナ --- */
-#bottomPanelsContainer { position: fixed; bottom: 90px; left: 444px; right: 404px; height: 260px; display: flex; gap: 12px; z-index: 100; pointer-events: none; }
-#bottomPanelsContainer > div { flex: 1; pointer-events: auto; border-radius: 10px; height: 100%; }
+#bottomPanelsContainer { position: fixed; bottom: 90px; left: 444px; right: 404px; height: 260px; display: flex; gap: 8px; z-index: 100; pointer-events: none; }
+#bottomPanelsContainer > div { flex: 1; pointer-events: auto; border-radius: 0; height: 100%; border: 2px solid #333; }
 
 /* --- 2Dマップ --- */
-#leafletWrap { position: fixed; top: 12px; left: 444px; right: 404px; bottom: 362px; background: #0b0c10; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); box-shadow: inset 0 0 30px rgba(0,0,0,0.8); z-index: 10; overflow: hidden; }
-#leafletMap{ width:100%; height:100%; background: #0b0c10 !important; }
-.epicenter-icon { display: flex; align-items: center; justify-content: center; font-size: 36px; color: #ef4444; font-weight: 700; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 10px rgba(239,68,68,0.8); }
+#leafletWrap { position: fixed; top: 12px; left: 444px; right: 404px; bottom: 362px; background: #000000; border-radius: 0; border: 2px solid #555; z-index: 10; overflow: hidden; }
+#leafletMap{ width:100%; height:100%; background: #000000 !important; }
+.epicenter-icon { display: flex; align-items: center; justify-content: center; font-size: 42px; color: #ff0000; font-weight: 900; text-shadow: 2px 2px 0 #fff, -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff; } /* 強烈な赤バツ印 */
 
-/* --- 津波避難ラベル --- */
-#tsunamiEvacuateLabel { position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%); background: rgba(220, 38, 38, 0.95); color: #fff; border: 2px solid #f87171; padding: 12px 28px; font-size: 22px; font-weight: 700; border-radius: 8px; z-index: 2000; display: none; box-shadow: 0 10px 25px rgba(220, 38, 38, 0.6); text-shadow: 0 2px 4px rgba(0,0,0,0.5); animation: blink 0.6s infinite alternate; pointer-events: none; white-space: nowrap; letter-spacing: 0.1em; }
+/* --- 津波避難ラベル (報道風の「津波！避難！」) --- */
+#tsunamiEvacuateLabel { 
+    position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%); 
+    background: #ff0000; color: #ffff00; border: 4px solid #ffffff; 
+    padding: 16px 40px; font-size: 32px; font-weight: 900; border-radius: 0; 
+    z-index: 2000; display: none; box-shadow: 10px 10px 0 rgba(0,0,0,0.8); 
+    animation: flashTsunami 0.5s infinite alternate; pointer-events: none; white-space: nowrap; letter-spacing: 0.1em; 
+}
+@keyframes flashTsunami { from { background: #ff0000; color: #ffff00; border-color: #fff; } to { background: #ffff00; color: #ff0000; border-color: #ff0000; } }
 
 /* --- 表示切替 --- */
-#displayModeWrap { position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%); z-index: 1000; display: flex; background: rgba(30, 41, 59, 0.9); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.5); pointer-events: auto; backdrop-filter: blur(8px); }
-.modeBtn { padding: 10px 20px; font-size: 13px; font-weight: 700; color: #94a3b8; background: transparent; border: none; cursor: pointer; transition: all 0.2s; outline: none; }
-.modeBtn:not(:last-child) { border-right: 1px solid rgba(255, 255, 255, 0.1); }
-.modeBtn.active { color: #f8fafc; background: rgba(59, 130, 246, 0.5); box-shadow: inset 0 0 10px rgba(59, 130, 246, 0.3); }
-.modeBtn:hover:not(.active) { background: rgba(255, 255, 255, 0.05); color: #e2e8f0; }
+#displayModeWrap { position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%); z-index: 1000; display: flex; background: #000; border: 2px solid #555; border-radius: 0; pointer-events: auto; }
+.modeBtn { padding: 12px 24px; font-size: 14px; font-weight: 900; color: #ccc; background: transparent; border: none; cursor: pointer; outline: none; }
+.modeBtn:not(:last-child) { border-right: 2px solid #555; }
+.modeBtn.active { color: #fff; background: #0055aa; }
+.modeBtn:hover:not(.active) { background: #222; color: #fff; }
 
 /* --- 巨大地震警戒テロップ --- */
-#megaQuakeTelop { position: absolute; bottom: 60px; left: calc(50% + 180px); background: rgba(217, 70, 239, 0.95); color: #fff; border: 2px solid #f0abfc; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 700; z-index: 1000; box-shadow: 0 4px 15px rgba(217,70,239,0.6); pointer-events: none; animation: blink 0.8s infinite alternate; white-space: nowrap; display: none; }
+#megaQuakeTelop { position: absolute; bottom: 60px; left: calc(50% + 180px); background: #ff00ff; color: #fff; border: 2px solid #fff; padding: 12px 24px; border-radius: 0; font-size: 16px; font-weight: 900; z-index: 1000; box-shadow: 4px 4px 0 rgba(0,0,0,0.8); pointer-events: none; white-space: nowrap; display: none; }
 
 /* --- 震度カラー凡例 --- */
-#shindoLegend { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 4px; background: rgba(30, 41, 59, 0.9); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 8px; padding: 6px; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.5); pointer-events: none; backdrop-filter: blur(8px); }
-.legendItem { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; border-radius: 6px; }
+#shindoLegend { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 2px; background: #000; border: 2px solid #555; border-radius: 0; padding: 4px; z-index: 1000; pointer-events: none; }
+.legendItem { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 900; border-radius: 0; border: 1px solid rgba(255,255,255,0.2); }
 
-/* --- 最新情報 --- */
-#latestPanel{ padding: 16px; background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(16px); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2); }
-.latestWrap{ display:flex; align-items: center; gap: 16px; }
-.latestLeft{ flex:1; color:#f8fafc; overflow:hidden; }
-.latestTitle{ font-size: 22px; font-weight: 700; margin-bottom: 6px; color: #f8fafc; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.latestSub{ font-size: 14px; color: #cbd5e1; margin-bottom: 8px; }
-.latestScale{ width: 90px; height: 90px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 48px; font-weight: 700; flex-shrink: 0; box-shadow: inset 0 2px 4px rgba(255,255,255,0.2), 0 4px 8px rgba(0,0,0,0.3); }
-.tag-checking { background: #f59e0b; color: #fff; padding: 2px 8px; font-weight: 700; font-size: 12px; margin-left: 8px; border-radius: 4px; }
-.tag { display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 13px; font-weight: 700; margin-right: 6px; min-width: 50px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+/* --- 最新情報 (地震情報テロップ風) --- */
+#latestPanel { padding: 0; background: #001133; border: 2px solid #004488; border-radius: 0; }
+.latestWrap { display:flex; align-items: stretch; gap: 0; }
+.latestScale { width: 110px; height: 110px; border-radius: 0; display: flex; align-items: center; justify-content: center; font-size: 56px; font-weight: 900; flex-shrink: 0; border-right: 2px solid #004488; }
+.latestLeft { flex: 1; padding: 12px 16px; color: #ffffff; overflow: hidden; display: flex; flex-direction: column; justify-content: center; }
+.latestTitle { font-size: 24px; font-weight: 900; margin-bottom: 6px; color: #ffff00; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.latestSub { font-size: 16px; color: #dddddd; margin-bottom: 8px; font-weight: 700; }
+.tag-checking { background: #ff9900; color: #000; padding: 4px 8px; font-weight: 900; font-size: 14px; margin-left: 8px; border-radius: 0; }
+.tag { display: inline-block; padding: 4px 12px; border-radius: 0; font-size: 14px; font-weight: 900; margin-right: 6px; min-width: 50px; text-align: center; border: 1px solid #fff; }
 
 /* --- 震度詳細 --- */
-#detailPanel{ height: 180px; }
+#detailPanel { height: 180px; background: #111; }
 #detailScrollArea{ width:100%; height:100%; overflow-y:auto; transition: opacity 0.8s ease-in-out; opacity: 1; }
-#detailScrollArea::-webkit-scrollbar { display: none; }
-.detailItem{ display:flex; align-items:center; padding: 12px 14px; border-bottom:1px solid rgba(255,255,255,0.05); }
-.detailScaleBox{ width: 36px; height: 36px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; margin-right: 14px; flex-shrink: 0; box-shadow: inset 0 1px 2px rgba(255,255,255,0.2); }
-.detailPlace { font-size: 14px; font-weight: 700; color: #e2e8f0; }
-.detailLpgmBox { background: #f97316; color: #fff; font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: auto; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+#detailScrollArea::-webkit-scrollbar { width: 8px; }
+#detailScrollArea::-webkit-scrollbar-thumb { background: #555; }
+.detailItem { display:flex; align-items:center; padding: 12px 16px; border-bottom: 1px solid #333; }
+.detailScaleBox { width: 42px; height: 42px; border-radius: 0; border: 1px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 900; margin-right: 16px; flex-shrink: 0; }
+.detailPlace { font-size: 16px; font-weight: 900; color: #ffffff; }
+.detailLpgmBox { background: #ff6600; color: #fff; font-size: 12px; font-weight: 900; padding: 4px 8px; border-radius: 0; margin-left: auto; }
 
 /* --- 津波 --- */
-#tsunamiPanel{ height: 200px; display: flex; flex-direction: column; border-left: 6px solid #3b82f6; }
+#tsunamiPanel{ height: 200px; display: flex; flex-direction: column; border-top: 4px solid #0055aa; border-left: none; }
 #tsunamiScrollArea{ width:100%; flex: 1; overflow-y:auto; transition: opacity 0.8s ease-in-out; opacity: 1; }
-#tsunamiScrollArea::-webkit-scrollbar { display: none; }
-.tsunamiSectionHeader { background: rgba(255,255,255,0.05); padding: 8px 14px; font-size: 12px; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.1); }
-.tsunamiItem { display:flex; padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.05); align-items: center; }
-.tsunamiGrade { width: 100px; padding: 6px 8px; border-radius: 6px; text-align: center; font-weight: 700; font-size: 13px; margin-right: 14px; flex-shrink: 0; box-shadow: inset 0 1px 2px rgba(255,255,255,0.2); }
-.tsunamiInfo { flex: 1; font-size: 14px; font-weight: 700; line-height: 1.5; color: #e2e8f0; }
-.noTsunami{ height:100%; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-weight: 700; font-size: 15px; text-align:center; padding:0 14px; }
+#tsunamiScrollArea::-webkit-scrollbar { width: 8px; }
+#tsunamiScrollArea::-webkit-scrollbar-thumb { background: #555; }
+.tsunamiSectionHeader { background: #002244; padding: 8px 16px; font-size: 14px; font-weight: 900; border-bottom: 2px solid #004488; color: #fff !important; }
+.tsunamiItem { display:flex; padding: 14px 16px; border-bottom: 1px solid #333; align-items: center; }
+.tsunamiGrade { width: 110px; padding: 8px 10px; border-radius: 0; border: 1px solid #fff; text-align: center; font-weight: 900; font-size: 15px; margin-right: 16px; flex-shrink: 0; }
+.tsunamiInfo { flex: 1; font-size: 16px; font-weight: 900; line-height: 1.5; color: #ffffff; }
+.noTsunami { height:100%; display:flex; align-items:center; justify-content:center; color:#cccccc; font-weight: 900; font-size: 16px; text-align:center; padding:0 16px; }
 
-/* --- EEW --- */
-#eewContainer { display: flex; flex-direction: column; gap: 10px; }
-#eewPopup { position:fixed; top:60px; left:444px; background: rgba(239, 68, 68, 0.95); color:#fff; border: 2px solid #fca5a5; border-radius: 8px; padding: 12px 30px; font-size: 22px; font-weight: 700; display:none; z-index:9999; box-shadow: 0 10px 25px rgba(239,68,68,0.6); letter-spacing: 0.05em; backdrop-filter: blur(8px); }
-.eewCard { display: none; background: rgba(15, 23, 42, 0.95); border: 2px solid #f97316; border-radius: 10px; backdrop-filter: blur(12px); pointer-events: auto; box-shadow: 0 8px 24px rgba(249, 115, 22, 0.4); color: #f8fafc; padding: 16px; }
+/* --- EEW (緊急地震速報) NHK報道特化スタイル --- */
+#eewContainer { display: flex; flex-direction: column; gap: 12px; }
+
+/* ポップアップを画面中央に巨大表示 */
+#eewPopup { 
+    position: fixed; top: 10%; left: 50%; transform: translateX(-50%); 
+    background: #cc0000; color: #ffff00; border: 6px solid #ffffff; 
+    border-radius: 0; padding: 20px 60px; font-size: 48px; font-weight: 900; 
+    display: none; z-index: 99999; box-shadow: 16px 16px 0px rgba(0,0,0,0.8); 
+    text-shadow: 3px 3px 0 #000; letter-spacing: 0.1em; 
+    animation: eewPopupFlash 0.5s infinite alternate; 
+}
+@keyframes eewPopupFlash { from { background: #cc0000; color: #ffff00; border-color: #fff; } to { background: #ffff00; color: #cc0000; border-color: #cc0000; } }
+
+/* EEWカード自体のスタイル */
+.eewCard { display: none; background: #111; border: 4px solid #ff9900; border-radius: 0; pointer-events: auto; color: #ffffff; }
 .eewCard.active { display: block; }
-.eewCard.warning { border-color: #ef4444; box-shadow: 0 8px 24px rgba(239, 68, 68, 0.6); animation: eewBlink 0.6s infinite alternate; }
-@keyframes eewBlink { from { border-color: #ef4444; box-shadow: 0 8px 24px rgba(239, 68, 68, 0.6); } to { border-color: #fca5a5; box-shadow: 0 8px 24px rgba(239, 68, 68, 0.8); } }
-.eewCard.cancel { border-color: #64748b; background: rgba(30, 41, 59, 0.9); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
-.eewHeader { font-size: 13px; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.2); margin-bottom: 12px; display: flex; justify-content: space-between; padding-bottom: 6px; align-items:center; gap:8px;}
-.eewBody { display: flex; align-items: center; gap: 16px; }
-.eewScaleBox { width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; border-radius: 12px; box-shadow: inset 0 2px 4px rgba(255,255,255,0.2); text-align: center; }
-.eewEpicenter { font-size: 20px; font-weight: 700; line-height: 1.3; color: #fbbf24; margin-bottom: 6px; }
-.eewSubInfo { font-size: 15px; font-weight: 700; display: flex; gap: 12px; color: #e2e8f0; }
-.eewAreas { font-size: 13px; color: #fdba74; margin-top: 12px; font-weight: 700; background: rgba(249, 115, 22, 0.1); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(249, 115, 22, 0.2); line-height: 1.5; }
+.eewCard.warning { 
+    border: 6px solid #ff0000; 
+    background: #220000; /* 暗い赤背景 */
+    box-shadow: 8px 8px 0px rgba(255,0,0,0.3); 
+}
+.eewCard.cancel { border-color: #555; background: #111; }
+
+.eewHeader { 
+    font-size: 16px; font-weight: 900; 
+    background: #ff9900; color: #000; /* 予報時はオレンジ背景黒文字 */
+    padding: 8px 12px; display: flex; justify-content: space-between; align-items:center; gap:8px;
+}
+.eewCard.warning .eewHeader {
+    background: #ff0000; color: #ffff00; /* 警報時は赤背景に黄色文字 */
+}
+
+.eewBody { display: flex; align-items: center; gap: 16px; padding: 16px; }
+.eewScaleBox { 
+    width: 90px; height: 90px; display: flex; align-items: center; justify-content: center; 
+    font-weight: 900; flex-shrink: 0; border-radius: 0; border: 2px solid #fff; text-align: center; 
+}
+.eewEpicenter { font-size: 24px; font-weight: 900; line-height: 1.3; color: #ffff00; margin-bottom: 8px; }
+.eewSubInfo { font-size: 16px; font-weight: 900; display: flex; gap: 16px; color: #ffffff; }
+.eewAreas { 
+    font-size: 15px; color: #ffffff; font-weight: 900; 
+    background: #aa0000; padding: 12px 16px; border-top: 4px solid #ff0000; line-height: 1.6; 
+}
 
 /* --- 履歴 --- */
-#quakePanel { display: flex; flex-direction: column; max-height: 440px; overflow-y: auto; gap: 8px; }
-#quakePanel::-webkit-scrollbar { width: 4px; }
-#quakePanel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
-.qItem { display:flex; background:rgba(30, 41, 59, 0.85); border:1px solid rgba(255,255,255,0.1); border-radius:8px; overflow:hidden; backdrop-filter:blur(8px); cursor:pointer; transition: all 0.2s; height: 85px; flex-shrink: 0; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-.qItem:hover { background:rgba(51, 65, 85, 0.95); transform: translateY(-2px); }
-.qItem.selected { border: 2px solid #2dd4bf; box-shadow: 0 0 15px rgba(45, 212, 191, 0.4); }
-.scaleBox{ width: 85px; display:flex; align-items:center; justify-content:center; font-size: 28px; font-weight:700; flex-shrink:0; }
-.qInfo{ flex:1; padding: 10px 14px; color:#f8fafc; display: flex; flex-direction: column; justify-content: center; }
-.qName{ font-size: 16px; font-weight:700; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.lpgm-badge { display: inline-flex; align-items: center; justify-content: center; background: rgba(249, 115, 22, 0.2); border: 1px solid #f97316; color: #fdba74; font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 8px; vertical-align: middle; }
+#quakePanel { display: flex; flex-direction: column; max-height: 440px; overflow-y: auto; gap: 0; border: 2px solid #333; background: #111; }
+#quakePanel::-webkit-scrollbar { width: 8px; }
+#quakePanel::-webkit-scrollbar-thumb { background: #555; }
+.qItem { display:flex; background: #111; border-bottom: 1px solid #333; cursor:pointer; transition: background 0.1s; height: 85px; flex-shrink: 0; }
+.qItem:hover { background: #222; }
+.qItem.selected { background: #002244; border-left: 6px solid #00aaff; }
+.scaleBox{ width: 85px; display:flex; align-items:center; justify-content:center; font-size: 32px; font-weight:900; flex-shrink:0; border-right: 1px solid #333; }
+.qInfo{ flex:1; padding: 10px 16px; color:#ffffff; display: flex; flex-direction: column; justify-content: center; }
+.qName{ font-size: 18px; font-weight:900; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lpgm-badge { display: inline-flex; align-items: center; justify-content: center; background: #ff6600; border: 1px solid #fff; color: #fff; font-size: 12px; font-weight: 900; padding: 4px 8px; margin-left: 8px; vertical-align: middle; }
 
 /* --- コメント --- */
-#commentPanel { height: 130px; border-top: 4px solid #2dd4bf; }
-.commentHeader { background: rgba(255,255,255,0.05); padding: 6px 14px; font-size: 12px; font-weight: 700; color: #5eead4; border-bottom: 1px solid rgba(255,255,255,0.1); }
-#commentScrollArea { width: 100%; height: calc(100% - 30px); overflow-y: auto; transition: opacity 0.8s ease-in-out; }
-#commentScrollArea::-webkit-scrollbar { display: none; }
-.commentBody { padding: 12px 14px; font-size: 13px; line-height: 1.6; font-weight: 700; white-space: pre-wrap; word-wrap: break-word; color: #e2e8f0; }
-.noComment { height: 100%; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 13px; font-weight: 700; }
+#commentPanel { height: 130px; border-top: 4px solid #00aaff; }
+.commentHeader { background: #002244; padding: 8px 16px; font-size: 14px; font-weight: 900; color: #fff; border-bottom: 2px solid #004488; }
+#commentScrollArea { width: 100%; height: calc(100% - 38px); overflow-y: auto; }
+#commentScrollArea::-webkit-scrollbar { width: 8px; }
+#commentScrollArea::-webkit-scrollbar-thumb { background: #555; }
+.commentBody { padding: 16px; font-size: 15px; line-height: 1.6; font-weight: 900; white-space: pre-wrap; word-wrap: break-word; color: #ffffff; }
+.noComment { height: 100%; display: flex; align-items: center; justify-content: center; color: #888; font-size: 14px; font-weight: 900; }
 
 /* --- 長周期 --- */
-#lpgmPanel { height: 130px; border-top: 4px solid #f97316; }
-.lpgmHeader { background: rgba(255,255,255,0.05); padding: 6px 14px; font-size: 12px; font-weight: 700; color: #fdba74; border-bottom: 1px solid rgba(255,255,255,0.1); }
+#lpgmPanel { height: 130px; border-top: 4px solid #ff9900; }
+.lpgmHeader { background: #331100; padding: 8px 16px; font-size: 14px; font-weight: 900; color: #fff; border-bottom: 2px solid #662200; }
 #lpgmBody { display: flex; align-items: center; justify-content: space-around; height: 50px; padding-top: 8px; }
-.lpgmClass { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; border-radius: 50%; background: rgba(255,255,255,0.1); color: #94a3b8; border: 2px solid rgba(255,255,255,0.2); transition: all 0.3s; }
-.lpgmClass.active-1 { background: rgba(45, 212, 191, 0.2); color: #2dd4bf; border-color: #2dd4bf; box-shadow: 0 0 10px rgba(45, 212, 191, 0.4); }
-.lpgmClass.active-2 { background: rgba(250, 204, 21, 0.2); color: #facc15; border-color: #facc15; box-shadow: 0 0 10px rgba(250, 204, 21, 0.4); }
-.lpgmClass.active-3 { background: rgba(249, 115, 22, 0.2); color: #f97316; border-color: #f97316; box-shadow: 0 0 10px rgba(249, 115, 22, 0.4); }
-.lpgmClass.active-4 { background: rgba(239, 68, 68, 0.2); color: #ef4444; border-color: #ef4444; box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); }
-#lpgmDesc { font-size: 12px; color: #cbd5e1; text-align: center; padding: 6px 14px; line-height: 1.5; font-weight: 700; }
+.lpgmClass { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900; border-radius: 0; background: #222; color: #666; border: 2px solid #444; }
+.lpgmClass.active-1 { background: #00aaff; color: #fff; border-color: #fff; }
+.lpgmClass.active-2 { background: #ffff00; color: #000; border-color: #fff; }
+.lpgmClass.active-3 { background: #ff9900; color: #000; border-color: #fff; }
+.lpgmClass.active-4 { background: #ff0000; color: #fff; border-color: #fff; }
+#lpgmDesc { font-size: 13px; color: #ccc; text-align: center; padding: 6px 16px; line-height: 1.5; font-weight: 900; }
 
 /* --- JMA XML ウィンドウ --- */
-#xmlPanel { display: flex; flex-direction: column; border-top: 4px solid #3b82f6; }
-#xmlPanel .xmlHeader { background: rgba(59, 130, 246, 0.15); padding: 8px 14px; font-size: 13px; font-weight: 700; color: #93c5fd; border-bottom: 1px solid rgba(255,255,255,0.1); }
-#xmlScrollArea { flex: 1; overflow-y: auto; transition: opacity 0.8s ease-in-out; }
-#xmlScrollArea::-webkit-scrollbar { display: none; }
-#btnXmlDetail { width: 100%; padding: 10px; font-size: 13px; font-weight: 700; color: #fff; background: rgba(59, 130, 246, 0.6); border: none; cursor: pointer; transition: all 0.2s; border-top: 1px solid rgba(255,255,255,0.1); }
-#btnXmlDetail:hover { background: rgba(59, 130, 246, 0.8); }
+#xmlPanel { display: flex; flex-direction: column; border-top: 4px solid #0055aa; }
+#xmlPanel .xmlHeader { background: #002244; padding: 8px 16px; font-size: 14px; font-weight: 900; color: #fff; border-bottom: 2px solid #004488; }
+#xmlScrollArea { flex: 1; overflow-y: auto; }
+#xmlScrollArea::-webkit-scrollbar { width: 8px; }
+#xmlScrollArea::-webkit-scrollbar-thumb { background: #555; }
+#btnXmlDetail { width: 100%; padding: 12px; font-size: 14px; font-weight: 900; color: #000; background: #ccc; border: none; cursor: pointer; border-top: 2px solid #555; }
+#btnXmlDetail:hover { background: #fff; }
 
 /* --- 気象警報 --- */
-#weatherWarningPanel { display: flex; flex-direction: column; border-top: 4px solid #ef4444; }
-#weatherWarningPanel .warnHeader { background: rgba(239, 68, 68, 0.15); padding: 8px 14px; font-size: 13px; font-weight: 700; color: #fca5a5; border-bottom: 1px solid rgba(255,255,255,0.1); }
-#weatherWarningScrollArea { flex: 1; overflow-y: auto; transition: opacity 0.8s ease-in-out; }
-#weatherWarningScrollArea::-webkit-scrollbar { display: none; }
+#weatherWarningPanel { display: flex; flex-direction: column; border-top: 4px solid #ff0000; }
+#weatherWarningPanel .warnHeader { background: #330000; padding: 8px 16px; font-size: 14px; font-weight: 900; color: #fff; border-bottom: 2px solid #660000; }
+#weatherWarningScrollArea { flex: 1; overflow-y: auto; }
+#weatherWarningScrollArea::-webkit-scrollbar { width: 8px; }
+#weatherWarningScrollArea::-webkit-scrollbar-thumb { background: #555; }
 
-/* --- XML等内部スタイル --- */
-.p-info-section { background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 8px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); color:#f8fafc; }
-.p-info-section h3 { margin: 0 0 12px 0; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; font-size: 15px; color: #e2e8f0; }
-.p-info-section h4 { margin: 12px 0 8px 0; font-size: 14px; color: #93c5fd; background: rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 6px; border-left: 4px solid #3b82f6; }
-.p-data-list { border: 1px solid rgba(255,255,255,0.05); padding: 12px; border-radius: 6px; background: rgba(0,0,0,0.2); margin-bottom: 12px; font-size: 13px; line-height: 1.6; }
-.p-data-list ul { margin: 6px 0; padding-left: 20px; }
-.p-section-tsunami { background-color: rgba(220, 38, 38, 0.1); border-color: rgba(239, 68, 68, 0.2); }
-.p-section-tsunami h3 { color: #fca5a5; border-color: rgba(239, 68, 68, 0.2); }
-.p-section-earthquake { background-color: rgba(217, 70, 239, 0.1); border-color: rgba(232, 121, 249, 0.2); }
-.p-section-earthquake h3 { color: #f0abfc; border-color: rgba(232, 121, 249, 0.2); }
-.p-section-volcano { background-color: rgba(217, 119, 6, 0.1); border-color: rgba(251, 146, 60, 0.2); }
-.p-section-volcano h3 { color: #fcd34d; border-color: rgba(251, 146, 60, 0.2); }
-.p-section-warning { background-color: rgba(225, 29, 72, 0.1); border-color: rgba(244, 63, 94, 0.2); }
-.p-section-warning h3 { color: #fda4af; border-color: rgba(244, 63, 94, 0.2); }
-.p-section-meteorology { background-color: rgba(22, 163, 74, 0.1); border-color: rgba(74, 222, 128, 0.2); }
-.p-section-meteorology h3 { color: #86efac; border-color: rgba(74, 222, 128, 0.2); }
-.p-status-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 700; margin-left: 6px; }
-.p-status-発表 { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid #f87171; }
-.p-status-継続 { background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid #fbbf24; }
-.p-status-解除 { background: rgba(100, 116, 139, 0.2); color: #94a3b8; border: 1px solid #64748b; text-decoration: line-through; }
-.p-status-default { background: rgba(255, 255, 255, 0.05); color: #cbd5e1; border: 1px solid rgba(255, 255, 255, 0.1); }
-.p-table { width: 100%; border-collapse: collapse; margin-top: 8px; margin-bottom: 12px; font-size: 13px; background: rgba(0,0,0,0.2); color: #e2e8f0; }
-.p-table th, .p-table td { border: 1px solid rgba(255,255,255,0.1); padding: 10px 12px; text-align: left; }
-.p-table th { background: rgba(255,255,255,0.05); color: #94a3b8; font-weight: 700; }
-.p-info-title { font-size: 16px; font-weight: 700; color: #93c5fd; margin-bottom: 8px; }
+/* --- XML等内部スタイル (ソリッドに) --- */
+.p-info-section { background: #1a1a1a; border: 1px solid #444; padding: 16px; margin-bottom: 16px; color:#ffffff; }
+.p-info-section h3 { margin: 0 0 12px 0; border-bottom: 2px solid #444; padding-bottom: 8px; font-size: 16px; color: #ffffff; }
+.p-info-section h4 { margin: 16px 0 8px 0; font-size: 15px; color: #ffff00; background: #222; padding: 8px 12px; border-left: 6px solid #ff9900; }
+.p-data-list { border: 1px solid #444; padding: 12px; background: #0a0a0a; margin-bottom: 12px; font-size: 14px; line-height: 1.6; }
+.p-data-list ul { margin: 6px 0; padding-left: 24px; }
+
+.p-section-tsunami { border-top: 4px solid #ff0000; }
+.p-section-tsunami h3 { color: #ff9999; }
+.p-section-earthquake { border-top: 4px solid #ff00ff; }
+.p-section-earthquake h3 { color: #ffccff; }
+.p-section-volcano { border-top: 4px solid #ff9900; }
+.p-section-warning { border-top: 4px solid #ff0000; }
+.p-section-meteorology { border-top: 4px solid #00cc00; }
+
+.p-status-badge { display: inline-block; padding: 4px 8px; font-size: 13px; font-weight: 900; margin-left: 8px; border: 1px solid #fff; }
+.p-status-発表 { background: #ff0000; color: #fff; }
+.p-status-継続 { background: #ff9900; color: #000; }
+.p-status-解除 { background: #555; color: #ccc; text-decoration: line-through; }
+.p-table { width: 100%; border-collapse: collapse; margin-top: 8px; margin-bottom: 12px; font-size: 14px; background: #111; color: #ffffff; }
+.p-table th, .p-table td { border: 1px solid #555; padding: 12px; text-align: left; }
+.p-table th { background: #222; color: #fff; font-weight: 900; }
+.p-info-title { font-size: 18px; font-weight: 900; color: #00aaff; margin-bottom: 8px; }
 
 /* --- 特別警報・臨時情報 --- */
-#megaQuakeAlertPanel { display: none; flex-direction: column; border-top: 4px solid #d946ef; }
-.mega-quake-header { background: rgba(217, 70, 239, 0.15); padding: 8px 14px; font-size: 13px; font-weight: 700; color: #f0abfc; border-bottom: 1px solid rgba(255,255,255,0.1); }
-.mega-quake-scroll { flex: 1; overflow-y: auto; transition: opacity 0.8s ease-in-out; }
-.mega-quake-scroll::-webkit-scrollbar { display: none; }
+#megaQuakeAlertPanel { display: none; flex-direction: column; border-top: 4px solid #ff00ff; }
+.mega-quake-header { background: #330033; padding: 8px 16px; font-size: 14px; font-weight: 900; color: #fff; border-bottom: 2px solid #660066; }
+.mega-quake-scroll { flex: 1; overflow-y: auto; }
+.mega-quake-scroll::-webkit-scrollbar { width: 8px; }
+.mega-quake-scroll::-webkit-scrollbar-thumb { background: #555; }
 
 /* --- AXIS・揺れ検知 --- */
-.axisHeader { background: rgba(255,255,255,0.05); padding: 8px 14px; font-size: 12px; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.1); }
-.axisScrollArea { width: 100%; height: calc(100% - 32px); overflow-y: auto; transition: opacity 0.8s ease-in-out; }
-.axisScrollArea::-webkit-scrollbar { display: none; }
-.info-title { font-size: 14px; font-weight: 700; color: #f8fafc; margin-bottom: 6px; }
-.info-text { font-size: 13px; line-height: 1.6; color: #cbd5e1; white-space: pre-wrap; word-wrap: break-word; font-weight: 700; }
+.axisHeader { background: #111; padding: 8px 16px; font-size: 14px; font-weight: 900; border-bottom: 2px solid #555; color: #fff !important; }
+.axisScrollArea { width: 100%; height: calc(100% - 36px); overflow-y: auto; }
+.axisScrollArea::-webkit-scrollbar { width: 8px; }
+.axisScrollArea::-webkit-scrollbar-thumb { background: #555; }
+.info-title { font-size: 16px; font-weight: 900; color: #ffffff; margin-bottom: 8px; }
+.info-text { font-size: 15px; line-height: 1.6; color: #dddddd; white-space: pre-wrap; word-wrap: break-word; font-weight: 900; }
 
-/* --- 時計 --- */
-#clockPanel { position: fixed; bottom: 12px; left: 12px; width: 420px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); color: #f8fafc; font-size: 24px; font-weight: 700; text-align: center; padding: 12px 0; z-index: 100; backdrop-filter: blur(12px); letter-spacing: 0.1em; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+/* --- 時計 (画面右上にニュースっぽく配置変更を推奨しますが元の位置でデザイン変更) --- */
+#clockPanel { position: fixed; bottom: 12px; left: 12px; width: 420px; background: #000; border: 2px solid #555; color: #ffffff; font-size: 28px; font-weight: 900; text-align: center; padding: 12px 0; z-index: 100; letter-spacing: 0.1em; border-radius: 0; }
 
 /* --- システムログ --- */
-#wsLogPanel { position: fixed; bottom: 12px; right: 12px; width: 380px; height: 120px; background: rgba(0,0,0,0.7); border: 1px solid rgba(52, 211, 153, 0.3); color: #34d399; font-family: monospace; font-size: 11px; padding: 10px; overflow-y: auto; z-index: 150; opacity: 0.8; box-sizing: border-box; display: none; border-radius: 8px; }
+#wsLogPanel { position: fixed; bottom: 12px; right: 12px; width: 380px; height: 120px; background: #000; border: 2px solid #00cc00; color: #00ff00; font-family: monospace; font-size: 12px; padding: 10px; overflow-y: auto; z-index: 150; box-sizing: border-box; display: none; border-radius: 0; font-weight: bold; }
 
 /* --- 設定 --- */
-#settingsModal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 20px 40px rgba(0,0,0,0.8); z-index: 10000; width: 380px; max-height: 85vh; overflow-y: auto; border-radius: 12px; padding: 24px; color: #f8fafc; display: none; backdrop-filter: blur(16px); }
-#settingsModal::-webkit-scrollbar { width: 6px; }
-#settingsModal::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
-.settingsHeader { font-size: 18px; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-.settingsHeader button { background: none; border: none; color: #cbd5e1; font-size: 24px; cursor: pointer; line-height: 1; transition: color 0.2s; }
-.settingsHeader button:hover { color: #ef4444; }
-.setting-group { margin-bottom: 24px; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 16px; }
-.setting-group-title { font-size: 14px; color: #94a3b8; margin-bottom: 12px; font-weight: 700; }
+#settingsModal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #111; border: 4px solid #fff; z-index: 10000; width: 420px; max-height: 85vh; overflow-y: auto; border-radius: 0; padding: 24px; color: #ffffff; display: none; }
+#settingsModal::-webkit-scrollbar { width: 8px; }
+#settingsModal::-webkit-scrollbar-thumb { background: #555; }
+.settingsHeader { font-size: 20px; font-weight: 900; border-bottom: 2px solid #555; padding-bottom: 12px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; }
+.settingsHeader button { background: none; border: none; color: #fff; font-size: 32px; font-weight: 900; cursor: pointer; line-height: 1; }
+.settingsHeader button:hover { color: #ff0000; }
+.setting-group { margin-bottom: 24px; border-bottom: 2px dashed #333; padding-bottom: 16px; }
+.setting-group-title { font-size: 16px; color: #00aaff; margin-bottom: 16px; font-weight: 900; }
 .setting-item { margin-bottom: 16px; display:flex; flex-direction: column; gap: 8px; }
-.setting-item label { font-size: 13px; font-weight: 700; color: #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
-.setting-item input[type=range] { width: 100%; cursor: pointer; accent-color: #3b82f6; }
-.setting-item input[type=checkbox] { width: 18px; height: 18px; cursor: pointer; accent-color: #3b82f6; }
-.setting-value { font-size: 13px; color: #34d399; }
-#selEewSource, #axisTokenInput { background: rgba(0,0,0,0.3); color: #f8fafc; border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 6px; font-family: inherit; }
-#btnAxisConnect { background: rgba(59, 130, 246, 0.8); color: #fff; border: none; padding: 12px; cursor: pointer; font-weight: 700; border-radius: 6px; transition: 0.2s; margin-top: 10px; width: 100%; }
-#btnAxisConnect:hover { background: #3b82f6; }
+.setting-item label { font-size: 14px; font-weight: 900; color: #ffffff; display: flex; justify-content: space-between; align-items: center; }
+.setting-value { font-size: 14px; color: #ffff00; }
+#selEewSource, #axisTokenInput { background: #000; color: #fff; border: 2px solid #555; padding: 12px; border-radius: 0; font-family: inherit; font-weight: 900; }
+#btnAxisConnect { background: #0055aa; color: #fff; border: 2px solid #fff; padding: 14px; cursor: pointer; font-weight: 900; border-radius: 0; transition: 0.2s; margin-top: 10px; width: 100%; }
+#btnAxisConnect:hover { background: #0077cc; }
 
-@keyframes blink{from{opacity:0.6}to{opacity:1}}
-
-/* レスポンシブ - PC・タブレット・スマホ対応 */
+/* レスポンシブ */
 @media screen and (max-width: 1300px) {
     #bottomPanelsContainer { left: 420px; right: 380px; }
     #leafletWrap { left: 420px; right: 380px; }
 }
 
 @media screen and (max-width: 1024px) {
-    body { overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; padding: 12px; background: #0f1115; }
+    body { overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; padding: 12px; background: #000; }
     #startupScreen { position: fixed; }
-    #eewPopup { position: fixed !important; top: 12px !important; left: 50% !important; transform: translateX(-50%) !important; font-size: 18px !important; z-index: 9999; }
+    #eewPopup { position: fixed !important; top: 12px !important; left: 50% !important; transform: translateX(-50%) !important; font-size: 24px !important; z-index: 9999; padding: 16px 32px; width: 80%; text-align: center; }
     
-    #leafletWrap { position: relative !important; width: 100% !important; height: 50vh !important; min-height: 400px; z-index: 5; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; order: 1; margin: 0 0 12px 0 !important; flex-shrink: 0; left: auto !important; right: auto !important; top: auto !important; bottom: auto !important;}
+    #leafletWrap { position: relative !important; width: 100% !important; height: 50vh !important; min-height: 400px; z-index: 5; border: 2px solid #555; border-radius: 0; order: 1; margin: 0 0 12px 0 !important; flex-shrink: 0; left: auto !important; right: auto !important; top: auto !important; bottom: auto !important;}
     
     #leftSidebar, #rightSidebar { position: relative !important; width: 100% !important; margin: 0 0 12px 0 !important; overflow: visible !important; gap: 12px; flex-shrink: 0; left: auto !important; right: auto !important; top: auto !important; bottom: auto !important;}
     #leftSidebar { order: 2; }
@@ -249,14 +305,14 @@ body { margin:0; background:#0f1115; overflow:hidden; font-family: "BIZ UDPGothi
 
 @media screen and (max-width: 600px) {
     #leafletWrap { height: 40vh !important; min-height: 300px; }
-    .latestTitle { font-size: 18px !important; }
-    .latestScale { width: 70px; height: 70px; font-size: 36px; }
+    .latestTitle { font-size: 20px !important; }
+    .latestScale { width: 80px; height: 80px; font-size: 42px; }
     .qItem { height: auto; min-height: 80px; }
-    .scaleBox { width: 70px; font-size: 24px; }
+    .scaleBox { width: 70px; font-size: 28px; }
     #displayModeWrap { flex-direction: column; bottom: 50px; }
-    .modeBtn { padding: 8px 12px; font-size: 11px; }
-    .modeBtn:not(:last-child) { border-right: none; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
-    #tsunamiEvacuateLabel { font-size: 16px; padding: 10px 20px; }
+    .modeBtn { padding: 10px 16px; font-size: 13px; }
+    .modeBtn:not(:last-child) { border-right: none; border-bottom: 2px solid #555; }
+    #tsunamiEvacuateLabel { font-size: 20px; padding: 12px 24px; }
     #megaQuakeTelop { bottom: 100px; left: 50%; transform: translateX(-50%); }
 }
 </style>
