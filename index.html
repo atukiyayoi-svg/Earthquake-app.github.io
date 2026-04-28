@@ -1448,35 +1448,41 @@ async function initAnnualAnimation() {
     if(isAnimFetching) return;
     isAnimFetching = true;
     
-    const currentYear = new Date().getFullYear();
-    let offset = 0;
-    annualQuakes = [];
     document.getElementById("annualAnimTime").innerText = "データ取得中...";
+    annualQuakes = [];
     
-    while (true) {
-        try {
-            const res = await fetch(`https://api.p2pquake.net/v2/history?codes=551&limit=100&offset=${offset}`);
-            const data = await res.json();
-            if (!data || data.length === 0) break;
-            let keepGoing = true;
-            data.forEach(q => {
-                if(q.earthquake && q.earthquake.hypocenter && q.earthquake.time) {
-                    const eqDate = new Date(q.earthquake.time.replace(/\//g, "-").replace(" ", "T"));
-                    if (eqDate.getFullYear() === currentYear && q.earthquake.hypocenter.latitude !== -200) {
-                        annualQuakes.push(q);
-                    } else if (eqDate.getFullYear() < currentYear) {
-                        keepGoing = false;
-                    }
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth() + 1;
+    
+    try {
+        // b.htmlを参考にUSGSからデータ取得（制限なしで今年のデータを全て取得するため月ごとに分割）
+        for (let month = 1; month <= currentMonth; month++) {
+            let startD = `${currentYear}-${String(month).padStart(2, '0')}-01`;
+            let endD = month === 12 ? `${currentYear+1}-01-01` : `${currentYear}-${String(month+1).padStart(2, '0')}-01`;
+            
+            // 日本周辺・全マグニチュードを指定
+            let url = `https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime=${startD}&endtime=${endD}&minlatitude=24&maxlatitude=46&minlongitude=122&maxlongitude=146`;
+            
+            const res = await fetch(url);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.features) {
+                    annualQuakes = annualQuakes.concat(data.features);
                 }
-            });
-            if (!keepGoing) break;
-            offset += 100;
-            if (offset > 2000) break; 
-            await new Promise(r => setTimeout(r, 100)); 
-        } catch(e) { break; }
+            }
+            await new Promise(r => setTimeout(r, 100)); // 負荷軽減のためのわずかな遅延
+        }
+        
+        // 時間順（古い順）にソート
+        annualQuakes.sort((a, b) => a.properties.time - b.properties.time);
+    } catch(e) { 
+        console.error("アニメーションデータ取得エラー", e);
+        document.getElementById("annualAnimTime").innerText = "取得失敗";
+        isAnimFetching = false;
+        setTimeout(initAnnualAnimation, 60000);
+        return;
     }
     
-    annualQuakes.sort((a,b) => new Date(a.earthquake.time.replace(/\//g, "-").replace(" ", "T")).getTime() - new Date(b.earthquake.time.replace(/\//g, "-").replace(" ", "T")).getTime());
     isAnimFetching = false;
     runAnnualAnimation();
 }
@@ -1500,7 +1506,8 @@ function runAnnualAnimation() {
         const dt = now - lastRealTime;
         lastRealTime = now;
         
-        virtualTime += dt * 1440; 
+        // 仮想時間の進行速度調整 (取得件数が膨大なため進行速度を少し早めに設定)
+        virtualTime += dt * 14400; 
         
         if (virtualTime > endTime) {
             setTimeout(initAnnualAnimation, 3000);
@@ -1517,7 +1524,7 @@ function runAnnualAnimation() {
         
         while (qIndex < annualQuakes.length) {
             const q = annualQuakes[qIndex];
-            const qTime = new Date(q.earthquake.time.replace(/\//g, "-").replace(" ", "T")).getTime();
+            const qTime = q.properties.time; // USGSフォーマットの時間(ms)
             if (qTime <= virtualTime) {
                 spawnAnimMarker(q);
                 qIndex++;
@@ -1532,25 +1539,38 @@ function runAnnualAnimation() {
     animReqId = requestAnimationFrame(animLoop);
 }
 
+// マグニチュードに基づく波紋カラーの取得
+function getRippleColor(mag) {
+    if (mag >= 7.0) return '#960096'; // 震度7に近い紫
+    if (mag >= 6.0) return '#a00000'; // 濃い赤
+    if (mag >= 5.5) return '#fa0000'; // 赤
+    if (mag >= 5.0) return '#ff2800'; // 朱色
+    if (mag >= 4.5) return '#ff9900'; // オレンジ
+    if (mag >= 4.0) return '#fae600'; // 黄色
+    if (mag >= 3.0) return '#00c800'; // 緑
+    if (mag >= 2.0) return '#0000ff'; // 青
+    if (mag >= 1.0) return '#f2f2ff'; // 水色〜白
+    return '#ffffff'; // 白っぽい色
+}
+
 function spawnAnimMarker(q) {
-    const lat = q.earthquake.hypocenter.latitude;
-    const lng = q.earthquake.hypocenter.longitude;
-    const mag = q.earthquake.hypocenter.magnitude;
-    const scaleStr = fmt.shindo(q.earthquake.maxScale, q.earthquake.hypocenter.depth);
-    const col = scaleColor(scaleStr);
+    const coords = q.geometry ? q.geometry.coordinates : null;
+    if (!coords) return;
     
-    const size = Math.max(20, Math.pow(mag, 2) * 1.5);
-    const duration = Math.max(1000, mag * 500); 
+    const lng = coords[0];
+    const lat = coords[1];
+    const mag = q.properties.mag || 0;
+    
+    const col = getRippleColor(mag);
+    
+    // マグニチュードの値が大きいほど波紋の最大のひろがりが大きくなるようにする
+    const size = Math.max(15, Math.pow(Math.max(1, mag), 2.5) * 1.5);
+    const duration = Math.max(1500, mag * 800); 
     
     let html = `<div class="anim-marker-container">
-        <div class="anim-ring" style="--max-size: ${size}px; border-color: ${col}; animation-duration: ${duration}ms; border-width: ${Math.max(1, mag/2)}px;"></div>
-    `;
-    
-    if (mag >= 4.0) {
-        html += `<div class="anim-label" style="color: ${magColor(mag)}; animation-duration: ${duration*1.5}ms;">M${mag.toFixed(1)}</div>`;
-    }
-    
-    html += `</div>`;
+        <div class="anim-ring" style="--max-size: ${size}px; border-color: ${col}; animation-duration: ${duration}ms; border-width: ${Math.max(1, mag)}px;"></div>
+    </div>`;
+    // M〇〇と表示する機能は削除済
     
     const icon = L.divIcon({
         className: '',
@@ -1562,30 +1582,45 @@ function spawnAnimMarker(q) {
     const marker = L.marker([lat, lng], {icon: icon, pane: 'epicenterPane'}).addTo(animMap);
     
     setTimeout(() => {
-        animMap.removeLayer(marker);
-    }, duration * 1.5);
+        if(animMap.hasLayer(marker)) animMap.removeLayer(marker);
+    }, duration);
 }
 
+// 円形の雫波紋アニメーションCSSの動的挿入
 const styleSheet = document.createElement("style");
 styleSheet.innerText = `
-@keyframes ringExpand {
-    0% { width: 0; height: 0; opacity: 1; }
-    100% { width: var(--max-size, 80px); height: var(--max-size, 80px); opacity: 0; }
+@keyframes dropRipple {
+    0% { 
+        width: 0; 
+        height: 0; 
+        opacity: 1; 
+        border-style: solid; 
+        border-radius: 50%; 
+        transform: translate(-50%, -50%); 
+    }
+    100% { 
+        width: var(--max-size, 80px); 
+        height: var(--max-size, 80px); 
+        opacity: 0; 
+        border-style: solid; 
+        border-radius: 50%; 
+        transform: translate(-50%, -50%); 
+        border-width: 1px !important; 
+    }
 }
 .anim-ring {
-    animation-name: ringExpand;
-    animation-timing-function: ease-out;
+    position: absolute;
+    top: 0;
+    left: 0;
+    border-radius: 50%;
+    animation-name: dropRipple;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
     animation-fill-mode: forwards;
 }
-@keyframes labelFadeOut {
-    0% { opacity: 1; transform: translateY(0); }
-    70% { opacity: 1; }
-    100% { opacity: 0; transform: translateY(-10px); }
-}
-.anim-label {
-    animation-name: labelFadeOut;
-    animation-timing-function: ease-out;
-    animation-fill-mode: forwards;
+.anim-marker-container {
+    position: absolute;
+    width: 0;
+    height: 0;
 }
 `;
 document.head.appendChild(styleSheet);
