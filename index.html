@@ -485,6 +485,10 @@ function applyAppearance() {
     const mapEl = document.getElementById('leafletMap');
     if(mapEl) mapEl.style.setProperty('background', userSettings.mapOceanColor, 'important');
 
+    document.querySelectorAll('.eew-mini-map').forEach(el => {
+        el.style.setProperty('background', userSettings.mapOceanColor, 'important');
+    });
+
     let st = document.getElementById('dynamicAppearance'); if(!st){st=document.createElement('style'); st.id='dynamicAppearance'; document.head.appendChild(st);}
     st.innerHTML = `
         .latestTitle { font-size: ${24 * (userSettings.fsLatest / 100)}px !important; }
@@ -496,6 +500,7 @@ function applyAppearance() {
         #xmlPanel .p-info-section { font-size: ${14 * (userSettings.fsXml / 100)}px !important; }
         #weatherWarningPanel .p-info-section { font-size: ${14 * (userSettings.fsWeatherWarning / 100)}px !important; }
         .eewEpicenter { font-size: ${22 * (userSettings.fsLatest / 100)}px !important; }
+        .eew-mini-map { background: ${userSettings.mapOceanColor} !important; }
     `;
     document.querySelectorAll('.legendItem').forEach(el=>{ let s=el.innerText; const cols=userSettings.customShindoColors?userSettings.shindoColors:defaultSettings.shindoColors; if(cols[s]){el.style.backgroundColor=cols[s]; el.style.color=getContrastColor(cols[s]);} });
 }
@@ -514,6 +519,13 @@ document.getElementById('chkShowMapTile').addEventListener('change', e => {
         if(userSettings.showMapTile) baseTileLayer.addTo(lMap);
         else baseTileLayer.remove();
     }
+    eewMiniMaps.forEach((m, id) => {
+        let t = eewMiniTileLayers.get(id);
+        if (t) {
+            if (userSettings.showMapTile) t.addTo(m);
+            else t.remove();
+        }
+    });
 });
 
 document.getElementById('mapOceanColorPicker').value = userSettings.mapOceanColor;
@@ -529,6 +541,7 @@ document.getElementById('mapLandColorPicker').addEventListener('input', e => {
     saveSettings();
     refreshMapDisplay();
     if(isEEWActive) updateEewGeojsonStyles();
+    updateEewMiniMapStyles();
 });
 
 document.getElementById('chkMapLandTransparent').checked = userSettings.mapLandTransparent;
@@ -537,6 +550,7 @@ document.getElementById('chkMapLandTransparent').addEventListener('change', e =>
     saveSettings();
     refreshMapDisplay();
     if(isEEWActive) updateEewGeojsonStyles();
+    updateEewMiniMapStyles();
 });
 
 
@@ -1040,6 +1054,12 @@ function updateLeafletMap(e,p,i,skp=false){
 let currentEewDisplayIndex = 0;
 let eewDisplayRotationTimer = null;
 let eewMiniMaps = new Map();
+let eewMiniGeojsonLayers = new Map(); 
+let eewMiniTileLayers = new Map();
+
+function updateEewMiniMapStyles() {
+    eewMiniGeojsonLayers.forEach(layer => layer.setStyle(getLandDefaultStyle()));
+}
 
 function startEewRotationTimer() {
     if (eewDisplayRotationTimer) clearInterval(eewDisplayRotationTimer);
@@ -1188,12 +1208,25 @@ function renderEewCards() {
                 zoomControl: false, attributionControl: false, 
                 dragging: false, touchZoom: false, scrollWheelZoom: false, doubleClickZoom: false
             }).setView([eL || 35, eO || 135], 6);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {subdomains: 'abcd', maxZoom: 10}).addTo(m);
+            
+            let tile = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {subdomains: 'abcd', maxZoom: 10});
+            if (userSettings.showMapTile !== false) tile.addTo(m);
+            eewMiniTileLayers.set(id, tile);
+
             if(eL && eO) {
                 L.marker([eL, eO], {
                     icon: L.divIcon({className: 'epicenter-icon', html: '×', iconSize: [30, 30], iconAnchor: [15, 15]})
                 }).addTo(m);
             }
+
+            if (prefData) {
+                let miniGeo = L.geoJSON(prefData, {
+                    style: () => getLandDefaultStyle(),
+                    interactive: false 
+                }).addTo(m);
+                eewMiniGeojsonLayers.set(id, miniGeo);
+            }
+
             eewMiniMaps.set(id, m);
             setTimeout(() => m.invalidateSize(), 100);
         } else {
@@ -1208,6 +1241,8 @@ function clearEEWDisplay(eid=null){
     if(eid){
         activeEEWs.delete(eid); eewOffsets.delete(eid); if(epicenterMarkers.has(eid)){lMap.removeLayer(epicenterMarkers.get(eid)); epicenterMarkers.delete(eid);} const c=document.getElementById(eid); if(c)c.remove(); if(eewPollTimers.has(eid)){clearInterval(eewPollTimers.get(eid)); eewPollTimers.delete(eid);} if(eewTimeoutTimers.has(eid)){clearTimeout(eewTimeoutTimers.get(eid)); eewTimeoutTimers.delete(eid);}
         if(eewMiniMaps.has(eid)){ eewMiniMaps.get(eid).remove(); eewMiniMaps.delete(eid); }
+        if(eewMiniGeojsonLayers.has(eid)){ eewMiniGeojsonLayers.delete(eid); }
+        if(eewMiniTileLayers.has(eid)){ eewMiniTileLayers.delete(eid); }
         
         if(activeEEWs.size===0){
             isEEWActive=false; stopEewRotationTimer(); renderLatestPanel(); eewPredictedStyles.clear(); eewRealtimeMaxLv.clear(); if(eewWaveTimer)cancelAnimationFrame(eewWaveTimer); eewWaveTimer=null; waveCanvas.getContext('2d').clearRect(0,0,waveCanvas.width,waveCanvas.height); const pu=document.getElementById("eewPopup"); if(pu)pu.style.display="none"; if(geojsonLayer)geojsonLayer.setStyle(getLandDefaultStyle()); if(window.lastKyoshinData)renderKyoshinCanvas(window.lastKyoshinData); if(latestQuakeMarker)latestQuakeMarker.setOpacity((isRealtimeOnlyMode&&!selectedHistoryQuake)?0:1); refreshMapDisplay(); updateTsunamiDisplay(currentTsunamiData,window.currentEarthquakeData);
@@ -1221,6 +1256,8 @@ function clearEEWDisplay(eid=null){
     }else{
         isEEWActive=false; stopEewRotationTimer(); activeEEWs.clear(); eewOffsets.clear(); eewPredictedStyles.clear(); eewRealtimeMaxLv.clear(); if(eewWaveTimer)cancelAnimationFrame(eewWaveTimer); eewWaveTimer=null; eewPollTimers.forEach(t=>clearInterval(t)); eewPollTimers.clear(); eewTimeoutTimers.forEach(t=>clearTimeout(t)); eewTimeoutTimers.clear(); waveCanvas.getContext('2d').clearRect(0,0,waveCanvas.width,waveCanvas.height); const ct=document.getElementById("eewContainer"); if(ct)ct.innerHTML=""; const pu=document.getElementById("eewPopup"); if(pu)pu.style.display="none"; epicenterMarkers.forEach(m=>lMap.removeLayer(m)); epicenterMarkers.clear(); 
         eewMiniMaps.forEach(m=>m.remove()); eewMiniMaps.clear();
+        eewMiniGeojsonLayers.clear(); 
+        eewMiniTileLayers.clear();
         if(geojsonLayer)geojsonLayer.setStyle(getLandDefaultStyle()); if(window.lastKyoshinData)renderKyoshinCanvas(window.lastKyoshinData); if(latestQuakeMarker)latestQuakeMarker.setOpacity((isRealtimeOnlyMode&&!selectedHistoryQuake)?0:1); refreshMapDisplay(); updateTsunamiDisplay(currentTsunamiData,window.currentEarthquakeData);
         renderLatestPanel();
     }
