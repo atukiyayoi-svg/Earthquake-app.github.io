@@ -386,6 +386,16 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
         <div class="setting-group">
             <div class="setting-group-title">外観設定</div>
             <div class="setting-item"><label>背景カラー</label><input type="color" id="bgColorPicker" value="#050505" style="width:100%; height:36px; cursor:pointer; border:none; padding:0; border-radius:4px;"></div>
+            
+            <div class="setting-item"><label>ベースマップ(地図タイル)を表示 <input type="checkbox" id="chkShowMapTile"></label></div>
+            <div class="setting-item"><label>海のカラー (マップ背景)</label><input type="color" id="mapOceanColorPicker" value="#050505" style="width:100%; height:36px; cursor:pointer; border:none; padding:0; border-radius:4px;"></div>
+            <div class="setting-item"><label>陸地のベースカラー (非塗り分け時)</label>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <input type="color" id="mapLandColorPicker" value="#222222" style="flex:1; height:36px; cursor:pointer; border:none; padding:0; border-radius:4px;">
+                    <label style="font-size:12px;"><input type="checkbox" id="chkMapLandTransparent"> 透過(マップ背景を透過)</label>
+                </div>
+            </div>
+
             <div class="setting-item"><label>震度カラーをカスタムする <input type="checkbox" id="chkCustomShindoColors"></label></div>
             <div id="customShindoColorsArea" style="display:none; flex-wrap:wrap; gap:12px; margin-top:12px;"></div>
         </div>
@@ -432,11 +442,23 @@ window.lpgmDataMap = new Map();
 
 const defaultSettings = {
     pushNotify: false, eewPrediction: false, eewRealtimePaint: false, showObsPoints: false, shakeDetect: false, estimateEpicenter: false, shakeThreshold: 8, eewSource: 'wolfx', volume: 0.5, alarmPitch: 1500, speechPitch: 1.0, speechRate: 1.5, speechVolume: 1.0, volFirst: 0.5, volLast: 0.5, volTsunami: 0.5, volUpdateApi: 0.5, volUpdateEew: 0.5, volWarning: 0.5, volBgm: 0.3, fsLatest: 100, fsDetail: 100, fsTsunami: 100, fsHistory: 100, fsComment: 100, fsXml: 100, fsWeatherWarning: 100, bgColor: "#050505", customShindoColors: false,
-    shindoColors: { "1": "#f2f2ff", "2": "#0000ff", "3": "#00c800", "4": "#fae600", "5弱": "#ff9900", "5強": "#ff2800", "6弱": "#fa0000", "6強": "#a00000", "7": "#960096" }
+    shindoColors: { "1": "#f2f2ff", "2": "#0000ff", "3": "#00c800", "4": "#fae600", "5弱": "#ff9900", "5強": "#ff2800", "6弱": "#fa0000", "6強": "#a00000", "7": "#960096" },
+    showMapTile: true, mapOceanColor: "#050505", mapLandColor: "#222222", mapLandTransparent: true
 };
 let userSettings = { ...defaultSettings };
 try { const saved = localStorage.getItem('epicaUserSettings'); if(saved) { const parsed = JSON.parse(saved); userSettings = { ...defaultSettings, ...parsed }; userSettings.shindoColors = { ...defaultSettings.shindoColors, ...(parsed.shindoColors || {}) }; } } catch(e){}
 function saveSettings() { localStorage.setItem('epicaUserSettings', JSON.stringify(userSettings)); }
+
+const MAP_BORDER_COLOR="#333333", MAP_BORDER_WEIGHT=2.0;
+
+function getLandDefaultStyle() {
+    return {
+        color: MAP_BORDER_COLOR,
+        weight: MAP_BORDER_WEIGHT,
+        fillColor: userSettings.mapLandTransparent ? "transparent" : userSettings.mapLandColor,
+        fillOpacity: userSettings.mapLandTransparent ? 0 : 0.5
+    };
+}
 
 const scaleColor = s => { const code = String(s); const cols = userSettings.customShindoColors ? userSettings.shindoColors : defaultSettings.shindoColors; if(code==="1")return cols["1"]; if(code==="2")return cols["2"]; if(code==="3")return cols["3"]; if(code==="4")return cols["4"]; if(code.includes("5弱"))return cols["5弱"]; if(code.includes("5強"))return cols["5強"]; if(code.includes("6弱"))return cols["6弱"]; if(code.includes("6強"))return cols["6強"]; if(code==="7")return cols["7"]; return "#444444"; };
 const magColor = m => m>=7.5 ? "#FF0000" : m>=6.0 ? "#FF9900" : m>=4.0 ? "#FFFF00" : "#00BFFF";
@@ -459,6 +481,10 @@ document.getElementById('btnCloseXmlDetail').addEventListener('click', ()=>{ doc
 function applyAppearance() {
     document.body.style.backgroundColor = userSettings.bgColor;
     if(document.getElementById('startupScreen')) document.getElementById('startupScreen').style.backgroundColor = userSettings.bgColor;
+    
+    const mapEl = document.getElementById('leafletMap');
+    if(mapEl) mapEl.style.setProperty('background', userSettings.mapOceanColor, 'important');
+
     let st = document.getElementById('dynamicAppearance'); if(!st){st=document.createElement('style'); st.id='dynamicAppearance'; document.head.appendChild(st);}
     st.innerHTML = `
         .latestTitle { font-size: ${24 * (userSettings.fsLatest / 100)}px !important; }
@@ -475,10 +501,45 @@ function applyAppearance() {
 }
 
 ['fsLatest','fsDetail','fsTsunami','fsHistory','fsComment','fsXml','fsWeatherWarning'].forEach(k=>{ let sl=document.getElementById(k+'Slider'); let vl=document.getElementById(k+'Val'); if(sl&&vl){ sl.value=userSettings[k]; vl.innerText=userSettings[k]+"%"; sl.addEventListener('input', e=>{ userSettings[k]=parseInt(e.target.value); vl.innerText=userSettings[k]+"%"; saveSettings(); applyAppearance(); }); } });
-document.getElementById('bgColorPicker').value = userSettings.bgColor; document.getElementById('bgColorPicker').addEventListener('change', e=>{userSettings.bgColor=e.target.value; saveSettings(); applyAppearance();});
+document.getElementById('bgColorPicker').value = userSettings.bgColor; document.getElementById('bgColorPicker').addEventListener('input', e=>{userSettings.bgColor=e.target.value; saveSettings(); applyAppearance();});
 const customColorsArea = document.getElementById('customShindoColorsArea');
 ["1","2","3","4","5弱","5強","6弱","6強","7"].forEach(k=>{ const div=document.createElement('div'); div.style.display='flex'; div.style.flexDirection='column'; div.style.alignItems='center'; div.innerHTML=`<span style="font-size:12px; font-weight:700;">${k}</span><input type="color" value="${userSettings.shindoColors[k]}" style="width:36px;height:36px;cursor:pointer;border:none;padding:0;border-radius:4px;">`; customColorsArea.appendChild(div); div.querySelector('input').addEventListener('change', e=>{ userSettings.shindoColors[k]=e.target.value; saveSettings(); applyAppearance(); refreshMapDisplay(); renderHistoryPanel(); renderLatestPanel(); }); });
 document.getElementById('chkCustomShindoColors').checked=userSettings.customShindoColors; customColorsArea.style.display=userSettings.customShindoColors?"flex":"none"; document.getElementById('chkCustomShindoColors').addEventListener('change', e=>{userSettings.customShindoColors=e.target.checked; customColorsArea.style.display=e.target.checked?"flex":"none"; saveSettings(); applyAppearance(); refreshMapDisplay(); renderHistoryPanel(); renderLatestPanel();});
+
+document.getElementById('chkShowMapTile').checked = userSettings.showMapTile;
+document.getElementById('chkShowMapTile').addEventListener('change', e => {
+    userSettings.showMapTile = e.target.checked;
+    saveSettings();
+    if(baseTileLayer) {
+        if(userSettings.showMapTile) baseTileLayer.addTo(lMap);
+        else baseTileLayer.remove();
+    }
+});
+
+document.getElementById('mapOceanColorPicker').value = userSettings.mapOceanColor;
+document.getElementById('mapOceanColorPicker').addEventListener('input', e => {
+    userSettings.mapOceanColor = e.target.value;
+    saveSettings();
+    applyAppearance();
+});
+
+document.getElementById('mapLandColorPicker').value = userSettings.mapLandColor;
+document.getElementById('mapLandColorPicker').addEventListener('input', e => {
+    userSettings.mapLandColor = e.target.value;
+    saveSettings();
+    refreshMapDisplay();
+    if(isEEWActive) updateEewGeojsonStyles();
+});
+
+document.getElementById('chkMapLandTransparent').checked = userSettings.mapLandTransparent;
+document.getElementById('chkMapLandTransparent').addEventListener('change', e => {
+    userSettings.mapLandTransparent = e.target.checked;
+    saveSettings();
+    refreshMapDisplay();
+    if(isEEWActive) updateEewGeojsonStyles();
+});
+
+
 document.getElementById('chkPushNotify').checked=userSettings.pushNotify; document.getElementById('chkPushNotify').addEventListener('change', async e=>{if(e.target.checked){if(!("Notification" in window)){alert("非対応"); e.target.checked=false;}else{const p=await Notification.requestPermission(); if(p!=="granted"){alert("拒否されました"); e.target.checked=false;}}} userSettings.pushNotify=e.target.checked; saveSettings();});
 ['chkEewPrediction','chkEewRealtimePaint','chkShakeDetect','chkEstimateEpicenter'].forEach(id=>{let el=document.getElementById(id); el.checked=userSettings[id.replace('chk','')]; el.addEventListener('change',e=>{userSettings[id.replace('chk','')]=e.target.checked; saveSettings();});});
 document.getElementById('chkShowObsPoints').checked=userSettings.showObsPoints; document.getElementById('chkShowObsPoints').addEventListener('change', e=>{userSettings.showObsPoints=e.target.checked; saveSettings(); refreshMapDisplay();});
@@ -851,7 +912,16 @@ function updateXmlTsunamiMap(){
 let isRealtimeOnlyMode=false; window.currentEarthquakeData=null; window.currentEarthquakePoints=null; window.currentEarthquakeIssue=null; let currentQuakeList=[]; let selectedHistoryQuake=null;
 document.getElementById('btnNormalMode').addEventListener('click', ()=>{if(!isRealtimeOnlyMode)return; isRealtimeOnlyMode=false; document.getElementById('btnNormalMode').classList.add('active'); document.getElementById('btnRealtimeMode').classList.remove('active'); refreshMapDisplay();});
 document.getElementById('btnRealtimeMode').addEventListener('click', ()=>{if(isRealtimeOnlyMode)return; isRealtimeOnlyMode=true; document.getElementById('btnRealtimeMode').classList.add('active'); document.getElementById('btnNormalMode').classList.remove('active'); refreshMapDisplay();});
-function refreshMapDisplay(){const eD=selectedHistoryQuake?selectedHistoryQuake.earthquake:window.currentEarthquakeData, eP=selectedHistoryQuake?selectedHistoryQuake.points:window.currentEarthquakePoints, eI=selectedHistoryQuake?selectedHistoryQuake.issue:window.currentEarthquakeIssue; if(eD&&eP)updateLeafletMap(eD,eP,eI,true); if(window.lastKyoshinData)renderKyoshinCanvas(window.lastKyoshinData);}
+function refreshMapDisplay(){
+    const eD=selectedHistoryQuake?selectedHistoryQuake.earthquake:window.currentEarthquakeData, 
+          eP=selectedHistoryQuake?selectedHistoryQuake.points:window.currentEarthquakePoints, 
+          eI=selectedHistoryQuake?selectedHistoryQuake.issue:window.currentEarthquakeIssue; 
+    
+    if(eD&&eP) updateLeafletMap(eD,eP,eI,true); 
+    else if(geojsonLayer) geojsonLayer.setStyle(getLandDefaultStyle());
+    
+    if(window.lastKyoshinData)renderKyoshinCanvas(window.lastKyoshinData);
+}
 function handleHistoryClick(q){if(selectedHistoryQuake&&selectedHistoryQuake.earthquake.time===q.earthquake.time){selectedHistoryQuake=null; updateLeafletMap(window.currentEarthquakeData,window.currentEarthquakePoints,window.currentEarthquakeIssue); updateCommentDisplay(currentQuakeList[0]||null);}else{selectedHistoryQuake=q; updateLeafletMap(q.earthquake,q.points,q.issue); updateCommentDisplay(q);} renderHistoryPanel(); if(window.lastKyoshinData)renderKyoshinCanvas(window.lastKyoshinData);}
 function renderHistoryPanel(){
     const p=document.getElementById("quakePanel"); if(!p)return; p.innerHTML=""; 
@@ -876,7 +946,6 @@ function generateMockKyoshin(){const it=new Array(sites.length).fill(0), el=(Dat
 async function applyNankaiMockData(){const mE={code:551,issue:{type:"DetailScale"},earthquake:{time:new Date(debugStartTime-3000).toISOString().replace("T"," ").substring(0,19),hypocenter:{name:"和歌山県南方沖",latitude:33.0,longitude:136.0,depth:10,magnitude:9.1},maxScale:70,domesticTsunami:"Warning"},points:[{pref:"和歌山県",addr:"和歌山県",scale:70}],comments:{freeFormComment:"テスト"}}; window.latestFullQuakeList=[mE]; updateCommentDisplay(mE); updateLPGMDisplay(9.1,10); isRealtimeOnlyMode=false; document.getElementById('btnNormalMode').classList.add('active'); document.getElementById('btnRealtimeMode').classList.remove('active'); window.currentEarthquakeData=mE.earthquake; window.currentEarthquakePoints=mE.points; window.currentEarthquakeIssue=mE.issue; selectedHistoryQuake=null; updateLeafletMap(mE.earthquake,mE.points,mE.issue); currentQuakeList=[mE]; renderHistoryPanel(); renderLatestPanel(); seUpdateApi.currentTime=0; seUpdateApi.play().catch(e=>{});}
 
 let isEEWActive=false, eewWaveTimer=null, activeEEWs=new Map(), eewPollTimers=new Map(), eewTimeoutTimers=new Map(), eewOffsets=new Map(), eewPredictedStyles=new Map(), eewRealtimeMaxLv=new Map();
-const MAP_BORDER_COLOR="#333333", MAP_BORDER_WEIGHT=2.0;
 const KYOSHIN_COLORS=["#000033","#000066","#000099","#0000cc","#0000ff","#0066ff","#00ccff","#00ffff","#66ffcc","#99ff99","#ccff66","#ffff00","#ffcc00","#ff9900","#ff6600","#ff3300","#ff0000","#cc0000","#990000","#660000","#800080"];
 const PREF_ARV={"北海道":1.6,"青森県":1.8,"岩手県":1.4,"宮城県":2.0,"秋田県":1.9,"山形県":1.8,"福島県":1.8,"茨城県":2.1,"栃木県":1.7,"群馬県":1.6,"埼玉県":2.4,"千葉県":2.3,"東京都":2.2,"神奈川県":2.1,"新潟県":2.2,"富山県":1.8,"石川県":1.9,"福井県":1.8,"山梨県":1.4,"長野県":1.5,"岐阜県":1.8,"静岡県":1.9,"愛知県":2.2,"三重県":2.0,"滋賀県":1.8,"京都府":1.7,"大阪府":2.4,"兵庫県":2.1,"奈良県":1.8,"和歌山県":1.6,"鳥取県":1.7,"島根県":1.5,"岡山県":1.9,"広島県":1.6,"山口県":1.6,"徳島県":1.8,"香川県":1.9,"愛媛県":1.7,"高知県":1.8,"福岡県":1.9,"佐賀県":2.2,"長崎県":1.5,"熊本県":1.8,"大分県":1.7,"宮崎県":1.8,"鹿児島県":1.7,"沖縄県":1.6};
 
@@ -899,7 +968,8 @@ function updateLPGMDisplay(m,d){const p=document.getElementById("lpgmBody"), dp=
 const scrollStates=new Map(); function startAutoScroll(id){const a=document.getElementById(id); if(!a)return; if(scrollStates.has(id))clearInterval(scrollStates.get(id).timer); const st={timer:null,md:0,wc:0,wl:80,fl:20}; st.timer=setInterval(()=>{const mP=a.scrollHeight-a.clientHeight; if(mP<=1){a.style.opacity=1;a.scrollTop=0;return;} switch(st.md){case 0:a.style.opacity=1;if(++st.wc>=st.wl){st.md=1;st.wc=0;}break;case 1:a.scrollTop+=1;if(a.scrollTop>=mP-1){st.md=2;st.wc=0;}break;case 2:if(++st.wc>=st.wl){st.md=3;st.wc=0;a.style.opacity=0;}break;case 3:if(++st.wc>=st.fl){a.scrollTop=0;st.md=4;st.wc=0;}break;case 4:a.style.opacity=1;if(++st.wc>=st.fl){st.md=0;st.wc=0;}break;}},45); scrollStates.set(id,st);}
 
 const lMap=L.map('leafletMap',{zoomControl:false,attributionControl:false,worldCopyJump:true,zoomSnap:0.1,zoomDelta:0.25,wheelPxPerZoomLevel:120}).setView([37.5,137],5.2);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20}).addTo(lMap);
+const baseTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20});
+
 let geojsonLayer, tsunamiGeojsonLayer=null, obsLayer=L.layerGroup().addTo(lMap), latestQuakeMarker=null, epicenterMarkers=new Map(), prefData=null, currentTsunamiData=null; const shakeDetectLayer=L.layerGroup().addTo(lMap); window.jmaStationsJson=null;
 lMap.createPane('tsunamiPane'); lMap.getPane('tsunamiPane').style.zIndex=410; lMap.getPane('tsunamiPane').style.pointerEvents='none'; lMap.createPane('kyoshinPane'); lMap.getPane('kyoshinPane').style.zIndex=450; lMap.getPane('kyoshinPane').style.pointerEvents='none'; lMap.createPane('wavePane'); lMap.getPane('wavePane').style.zIndex=460; lMap.getPane('wavePane').style.pointerEvents='none'; lMap.createPane('epicenterPane'); lMap.getPane('epicenterPane').style.zIndex=650; lMap.getPane('epicenterPane').style.pointerEvents='none';
 const waveCanvas=document.createElement('canvas'); waveCanvas.style.pointerEvents='none'; waveCanvas.className='leaflet-zoom-animated'; const WaveLayer=L.Layer.extend({onAdd:function(m){this._m=m;this._c=waveCanvas;m.getPane('wavePane').appendChild(this._c);m.on('moveend',this._rs,this);this._rs();},onRemove:function(m){m.getPane('wavePane').removeChild(this._c);m.off('moveend',this._rs,this);},_rs:function(){const sz=this._m.getSize();this._c.width=sz.x;this._c.height=sz.y;L.DomUtil.setPosition(this._c,this._m.containerPointToLayerPoint([0,0]));}}); lMap.addLayer(new WaveLayer());
@@ -909,8 +979,40 @@ window.addEventListener('resize',()=>lMap?.invalidateSize());
 function drawWaves(){const ctx=waveCanvas.getContext('2d'); ctx.clearRect(0,0,waveCanvas.width,waveCanvas.height); if(!isEEWActive||activeEEWs.size===0)return; const nt=Date.now(); activeEEWs.forEach(d=>{const la=parseFloat(d.Latitude), lo=parseFloat(d.Longitude), dp=parseInt(d.Depth)||10, el=(nt-new Date(d.OriginTime).getTime())/1000; if(el<0)return; const pD=el*9.1, sD=el*4.9, pR=pD>dp?Math.sqrt(pD*pD-dp*dp):0, sR=sD>dp?Math.sqrt(sD*sD-dp*dp):0, c=lMap.latLngToContainerPoint([la,lo]), k2p=k=>Math.abs(lMap.latLngToContainerPoint([la,lo+(k/111.32)]).x-c.x), pPx=k2p(pR), sPx=k2p(sR); if(sPx>0){ctx.beginPath();ctx.arc(c.x,c.y,sPx,0,Math.PI*2);ctx.strokeStyle="#FF0000";ctx.lineWidth=3;ctx.stroke();} if(pPx>0){ctx.beginPath();ctx.arc(c.x,c.y,pPx,0,Math.PI*2);ctx.strokeStyle="#00BFFF";ctx.lineWidth=2;ctx.stroke();}}); eewWaveTimer=requestAnimationFrame(drawWaves);}
 
 let siteToFeatureId=[]; let isSiteMapReady=false; function tryPrecomputeSiteFeatures(){if(sites.length>0&&prefData?.features&&!isSiteMapReady){siteToFeatureId=new Array(sites.length).fill(null); for(let i=0;i<sites.length;i++){let mD=Infinity, bI=null; prefData.features.forEach((f,idx)=>{const nm=f.properties.name||f.properties.nam_ja||f.properties.code, pt=getPolygonPoint(f), d=getDistance(sites[i].lat,sites[i].lng,pt.lat,pt.lng); if(d<mD){mD=d;bI=f.id||nm||`feat_${idx}`;}}); siteToFeatureId[i]=bI;} isSiteMapReady=true;}}
-async function initLeaflet(){try{const rs=await fetch("saibun.geojson"); prefData=await rs.json(); geojsonLayer=L.geoJSON(prefData,{style:()=>({color:MAP_BORDER_COLOR,weight:MAP_BORDER_WEIGHT,fillColor:"transparent",fillOpacity:0.5})}).addTo(lMap); tryPrecomputeSiteFeatures();}catch(e){} try{const tr=await fetch("tsunami.json"); tsunamiGeojsonLayer=L.geoJSON(await tr.json(),{pane:'tsunamiPane',style:()=>({color:"transparent",weight:0,fillColor:"transparent",fillOpacity:0})}).addTo(lMap); updateTsunamiMap();}catch(e){} try{window.jmaStationsJson=await(await fetch("source/JMAstations.json")).json();}catch(e){}}
-function updateEewGeojsonStyles(){if(!geojsonLayer)return; geojsonLayer.setStyle(f=>{const fi=f.id||f.properties.name||f.properties.nam_ja||f.properties.code; let pS="0",iF=false; if(userSettings.eewPrediction&&eewPredictedStyles.has(fi)){let pd=eewPredictedStyles.get(fi); pS=pd.shindo; iF=pd.isForecastTarget;} let rS=userSettings.eewRealtimePaint&&eewRealtimeMaxLv.has(fi)?lvToShindoStr(eewRealtimeMaxLv.get(fi)):"0"; let mS=fmt.intensityToNum(pS)>fmt.intensityToNum(rS)?pS:rS; return {color:iF?"#FFFF00":MAP_BORDER_COLOR,weight:iF?3.0:MAP_BORDER_WEIGHT,fillColor:mS!=="0"&&mS!=="不明"?scaleColor(mS):"transparent",fillOpacity:mS!=="0"&&mS!=="不明"?(iF?0.9:0.7):0};});}
+
+async function initLeaflet(){
+    if(userSettings.showMapTile !== false) baseTileLayer.addTo(lMap);
+    try{
+        const rs=await fetch("saibun.geojson"); prefData=await rs.json(); 
+        geojsonLayer=L.geoJSON(prefData,{style:()=>getLandDefaultStyle()}).addTo(lMap); 
+        tryPrecomputeSiteFeatures();
+    }catch(e){} 
+    try{
+        const tr=await fetch("tsunami.json"); tsunamiGeojsonLayer=L.geoJSON(await tr.json(),{pane:'tsunamiPane',style:()=>({color:"transparent",weight:0,fillColor:"transparent",fillOpacity:0})}).addTo(lMap); updateTsunamiMap();
+    }catch(e){} 
+    try{
+        window.jmaStationsJson=await(await fetch("source/JMAstations.json")).json();
+    }catch(e){}
+}
+
+function updateEewGeojsonStyles(){
+    if(!geojsonLayer)return; 
+    geojsonLayer.setStyle(f=>{
+        const fi=f.id||f.properties.name||f.properties.nam_ja||f.properties.code; 
+        let pS="0",iF=false; 
+        if(userSettings.eewPrediction&&eewPredictedStyles.has(fi)){let pd=eewPredictedStyles.get(fi); pS=pd.shindo; iF=pd.isForecastTarget;} 
+        let rS=userSettings.eewRealtimePaint&&eewRealtimeMaxLv.has(fi)?lvToShindoStr(eewRealtimeMaxLv.get(fi)):"0"; 
+        let mS=fmt.intensityToNum(pS)>fmt.intensityToNum(rS)?pS:rS; 
+        
+        let isColored = mS!=="0"&&mS!=="不明";
+        if (isColored) {
+            return {color:iF?"#FFFF00":MAP_BORDER_COLOR,weight:iF?3.0:MAP_BORDER_WEIGHT,fillColor:scaleColor(mS),fillOpacity:(iF?0.9:0.7)};
+        } else {
+            let base = getLandDefaultStyle();
+            return {color:iF?"#FFFF00":base.color,weight:iF?3.0:base.weight,fillColor:base.fillColor,fillOpacity:base.fillOpacity};
+        }
+    });
+}
 
 function updateLeafletMap(e,p,i,skp=false){
     if(isEEWActive)return; if(obsLayer)obsLayer.clearLayers(); let bd=null, hsP=false;
@@ -920,7 +1022,15 @@ function updateLeafletMap(e,p,i,skp=false){
         p.forEach(pt=>{let an=pt.isArea?pt.addr:null; if(!pt.isArea&&typeof JMAPoints!=='undefined'&&window.jmaStationsJson){let ix=JMAPoints.indexOf(pt.addr); if(ix!==-1&&window.jmaStationsJson[ix].area)an=window.jmaStationsJson[ix].area.name;} if(!an)an=pt.addr; if(!aM[an]||pt.scale>aM[an])aM[an]=pt.scale; if(userSettings.showObsPoints&&!hO&&!pt.isArea&&typeof JMAPoints!=='undefined'&&window.jmaStationsJson){let ix=JMAPoints.indexOf(pt.addr); if(ix!==-1){let sl=window.jmaStationsJson[ix].lat, slo=window.jmaStationsJson[ix].lon, sc=pt.scale, im="source/jqk_int"+(sc==45?"50":sc==50?"55":sc==55?"60":sc==60?"65":sc==70?"7":sc/10)+".png"; if(sc==46)im="source/jqk_int_.png"; let mk=L.marker([sl,slo],{icon:L.icon({iconUrl:im,iconSize:[16,16]}),zIndexOffset:sc*100}); obsLayer.addLayer(mk);}}});
         if((i?.type==="ScalePrompt"||i?.type==="Destination")&&!hO){geojsonLayer.eachLayer(l=>{const nm=l.feature.properties.name||l.feature.properties.nam_ja||l.feature.properties.code, sc=aM[nm]; if(sc>=10){const pt=getPolygonPoint(l.feature), im="source/jqk_int"+(sc==45?"50":sc==50?"55":sc==55?"60":sc==60?"65":sc==70?"7":sc/10)+".png"; let mk=L.marker([pt.lat,pt.lng],{icon:L.icon({iconUrl:sc==46?"source/jqk_int_.png":im,iconSize:[20,20]}),zIndexOffset:sc*100}); obsLayer.addLayer(mk);}});}
         geojsonLayer.eachLayer(l=>{const nm=l.feature.properties.name||l.feature.properties.nam_ja||l.feature.properties.code, sc=aM[nm]; if(sc>=10){if(!bd)bd=l.getBounds();else bd.extend(l.getBounds()); hsP=true;}});
-        geojsonLayer.setStyle(f=>{const nm=f.properties.name||f.properties.nam_ja||f.properties.code; return {color:MAP_BORDER_COLOR,weight:MAP_BORDER_WEIGHT,fillColor:!(isRealtimeOnlyMode&&!isEEWActive&&!selectedHistoryQuake)&&aM[nm]?scaleColor(fmt.shindo(aM[nm],e?.hypocenter?.depth)):"transparent",fillOpacity:0.8};});
+        geojsonLayer.setStyle(f=>{
+            const nm=f.properties.name||f.properties.nam_ja||f.properties.code; 
+            let hasColor = !(isRealtimeOnlyMode&&!isEEWActive&&!selectedHistoryQuake)&&aM[nm];
+            if(hasColor) {
+                return {color:MAP_BORDER_COLOR,weight:MAP_BORDER_WEIGHT,fillColor:scaleColor(fmt.shindo(aM[nm],e?.hypocenter?.depth)),fillOpacity:0.8};
+            } else {
+                return getLandDefaultStyle();
+            }
+        });
     }
     if(!skp&&bd){if(hsP)lMap.flyToBounds(bd,{padding:[30,30],maxZoom:8,duration:1.5}); else if(e?.hypocenter?.latitude)lMap.flyTo([e.hypocenter.latitude,e.hypocenter.longitude],8,{duration:1.5});}
     const ar=document.getElementById("detailScrollArea"); if(ar&&p?.length>0){ar.innerHTML=""; [...p].sort((a,b)=>b.scale-a.scale).forEach(pt=>{const s=fmt.shindo(pt.scale,e?.hypocenter?.depth), c=scaleColor(s); let lpgmH = pt.lpgmInt ? `<div class="detailLpgmBox">長周期 階級${pt.lpgmInt}</div>` : ""; ar.innerHTML+=`<div class="detailItem"><div class="detailScaleBox" style="background:${c};color:${getContrastColor(c)}">${s}</div><div class="detailPlace">${pt.pref} ${pt.addr||''}</div>${lpgmH}</div>`;}); ar.scrollTop=0; startAutoScroll("detailScrollArea"); applyAppearance();}
@@ -1100,7 +1210,7 @@ function clearEEWDisplay(eid=null){
         if(eewMiniMaps.has(eid)){ eewMiniMaps.get(eid).remove(); eewMiniMaps.delete(eid); }
         
         if(activeEEWs.size===0){
-            isEEWActive=false; stopEewRotationTimer(); renderLatestPanel(); eewPredictedStyles.clear(); eewRealtimeMaxLv.clear(); if(eewWaveTimer)cancelAnimationFrame(eewWaveTimer); eewWaveTimer=null; waveCanvas.getContext('2d').clearRect(0,0,waveCanvas.width,waveCanvas.height); const pu=document.getElementById("eewPopup"); if(pu)pu.style.display="none"; if(geojsonLayer)geojsonLayer.setStyle({color:MAP_BORDER_COLOR,weight:MAP_BORDER_WEIGHT,fillColor:"transparent",fillOpacity:0.5}); if(window.lastKyoshinData)renderKyoshinCanvas(window.lastKyoshinData); if(latestQuakeMarker)latestQuakeMarker.setOpacity((isRealtimeOnlyMode&&!selectedHistoryQuake)?0:1); refreshMapDisplay(); updateTsunamiDisplay(currentTsunamiData,window.currentEarthquakeData);
+            isEEWActive=false; stopEewRotationTimer(); renderLatestPanel(); eewPredictedStyles.clear(); eewRealtimeMaxLv.clear(); if(eewWaveTimer)cancelAnimationFrame(eewWaveTimer); eewWaveTimer=null; waveCanvas.getContext('2d').clearRect(0,0,waveCanvas.width,waveCanvas.height); const pu=document.getElementById("eewPopup"); if(pu)pu.style.display="none"; if(geojsonLayer)geojsonLayer.setStyle(getLandDefaultStyle()); if(window.lastKyoshinData)renderKyoshinCanvas(window.lastKyoshinData); if(latestQuakeMarker)latestQuakeMarker.setOpacity((isRealtimeOnlyMode&&!selectedHistoryQuake)?0:1); refreshMapDisplay(); updateTsunamiDisplay(currentTsunamiData,window.currentEarthquakeData);
             document.getElementById("eewContainer").innerHTML = "";
         }
         else{
@@ -1111,7 +1221,7 @@ function clearEEWDisplay(eid=null){
     }else{
         isEEWActive=false; stopEewRotationTimer(); activeEEWs.clear(); eewOffsets.clear(); eewPredictedStyles.clear(); eewRealtimeMaxLv.clear(); if(eewWaveTimer)cancelAnimationFrame(eewWaveTimer); eewWaveTimer=null; eewPollTimers.forEach(t=>clearInterval(t)); eewPollTimers.clear(); eewTimeoutTimers.forEach(t=>clearTimeout(t)); eewTimeoutTimers.clear(); waveCanvas.getContext('2d').clearRect(0,0,waveCanvas.width,waveCanvas.height); const ct=document.getElementById("eewContainer"); if(ct)ct.innerHTML=""; const pu=document.getElementById("eewPopup"); if(pu)pu.style.display="none"; epicenterMarkers.forEach(m=>lMap.removeLayer(m)); epicenterMarkers.clear(); 
         eewMiniMaps.forEach(m=>m.remove()); eewMiniMaps.clear();
-        if(geojsonLayer)geojsonLayer.setStyle({color:MAP_BORDER_COLOR,weight:MAP_BORDER_WEIGHT,fillColor:"transparent",fillOpacity:0.5}); if(window.lastKyoshinData)renderKyoshinCanvas(window.lastKyoshinData); if(latestQuakeMarker)latestQuakeMarker.setOpacity((isRealtimeOnlyMode&&!selectedHistoryQuake)?0:1); refreshMapDisplay(); updateTsunamiDisplay(currentTsunamiData,window.currentEarthquakeData);
+        if(geojsonLayer)geojsonLayer.setStyle(getLandDefaultStyle()); if(window.lastKyoshinData)renderKyoshinCanvas(window.lastKyoshinData); if(latestQuakeMarker)latestQuakeMarker.setOpacity((isRealtimeOnlyMode&&!selectedHistoryQuake)?0:1); refreshMapDisplay(); updateTsunamiDisplay(currentTsunamiData,window.currentEarthquakeData);
         renderLatestPanel();
     }
 }
