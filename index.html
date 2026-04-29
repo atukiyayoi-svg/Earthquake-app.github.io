@@ -118,7 +118,7 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 .eewCard.active { display: flex; }
 .eewCard.warning { border-color: #FF0000; animation: eewBlinkNHK 1s infinite alternate; }
 @keyframes eewBlinkNHK { from { border-color: #FF0000; } to { border-color: #FF6666; } }
-.eewCard.cancel { border-color: #666; background: #111; }
+.eewCard.cancel { border-color: #666; background: #111; animation: none; }
 .eewHeader { font-size: 16px; font-weight: 700; border-bottom: 2px solid #555; margin-bottom: 12px; padding-bottom: 8px; color: #FFFF00; }
 .eewBody { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
 .eewScaleBox { width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; border: 2px solid #fff; font-size: 38px; border-radius: 4px; }
@@ -947,13 +947,130 @@ function renderHistoryPanel(){
 }
 
 let isDebugNankai=false, debugStartTime=0; document.addEventListener('keydown', e=>{if(e.key==='1'){if(!isDebugNankai)triggerNankaiDebug();}else if(e.key==='2'){const p=document.getElementById("wsLogPanel"); if(p)p.style.display=(p.style.display==='none'||p.style.display==='')?'block':'none';}});
-function triggerNankaiDebug(){
-    isDebugNankai=true; debugStartTime=Date.now(); addLog("【DEBUG】シミュレーション開始"); const oS=new Date(debugStartTime-3000).toISOString().replace("T"," ").substring(0,19);
-    setTimeout(()=>updateWolfxEEW({"type":"jma_eew","EventID":"DEBUG_N001","Title":"緊急地震速報（警報）","Serial":"1","isFinal":false,"isCancel":false,"isWarn":true,"isTraining":true,"isAssumption":false,"isSea":true,"AnnouncedTime":new Date().toISOString().replace("T"," ").substring(0,19),"OriginTime":oS,"Hypocenter":"和歌山県南方沖","Latitude":33.0,"Longitude":136.0,"Magunitude":"9.1","Depth":"10","MaxIntensity":"7","WarnArea":{"Chiiki":"東海、近畿、四国、九州、関東"},"OriginalText":"テストEEWデータ"}),0);
-    setTimeout(async()=>{clearEEWDisplay(); await applyNankaiMockData(); const mx=`<?xml version="1.0" encoding="utf-8"?><Report xmlns="http://xml.kishou.go.jp/jmaxml1/"><Head><Title>気象警報・注意報</Title><ReportDateTime>${new Date().toISOString()}</ReportDateTime><InfoKind>気象警報・注意報</InfoKind><Headline><Text>テスト大雨警報</Text></Headline></Head><Body><Warning type="気象警報・注意報"><Item><Area><Name>東京都</Name></Area><Kind><Name>大雨警報</Name><Status>発表</Status></Kind></Item></Warning></Body></Report>`; xmlBuffer.extra=[]; warnBuffer.extra=[]; await processXmlString(mx,"extra","m1"); renderXmlPanels();},15000);
+
+function triggerNankaiDebug() {
+    isDebugNankai = true;
+    debugStartTime = Date.now();
+    addLog("【DEBUG】フルシミュレーション開始");
+
+    // 1. EEW 1 (Warn)
+    setTimeout(() => {
+        const oS = new Date(Date.now() - 5000).toISOString().replace("T", " ").substring(0, 19);
+        updateWolfxEEW({
+            "type": "jma_eew", "EventID": "DEBUG_EEW_1", "Title": "緊急地震速報（警報）",
+            "Serial": "1", "isFinal": false, "isCancel": false, "isWarn": true,
+            "isTraining": true, "isAssumption": false, "isSea": false,
+            "AnnouncedTime": new Date().toISOString().replace("T", " ").substring(0, 19),
+            "OriginTime": oS, "Hypocenter": "東京湾", "Latitude": 35.5, "Longitude": 139.8,
+            "Magunitude": "7.3", "Depth": "30", "MaxIntensity": "6弱",
+            "WarnArea": { "Chiiki": "東京、神奈川、千葉、埼玉" }, "OriginalText": "テストEEW第1報"
+        });
+    }, 1000);
+
+    // 2. EEW 2 (Cancel later)
+    setTimeout(() => {
+        const oS2 = new Date(Date.now() - 3000).toISOString().replace("T", " ").substring(0, 19);
+        updateWolfxEEW({
+            "type": "jma_eew", "EventID": "DEBUG_EEW_2", "Title": "緊急地震速報（予報）",
+            "Serial": "1", "isFinal": false, "isCancel": false, "isWarn": false,
+            "isTraining": true, "isAssumption": false, "isSea": true,
+            "AnnouncedTime": new Date().toISOString().replace("T", " ").substring(0, 19),
+            "OriginTime": oS2, "Hypocenter": "大阪湾", "Latitude": 34.5, "Longitude": 135.2,
+            "Magunitude": "4.5", "Depth": "10", "MaxIntensity": "3",
+            "WarnArea": { "Chiiki": "大阪" }, "OriginalText": "テストEEW第1報(大阪)"
+        });
+    }, 3000);
+
+    // 3. EEW 1 Update
+    setTimeout(() => {
+        const oS = new Date(Date.now() - 10000).toISOString().replace("T", " ").substring(0, 19);
+        updateWolfxEEW({
+            "type": "jma_eew", "EventID": "DEBUG_EEW_1", "Title": "緊急地震速報（警報）",
+            "Serial": "2", "isFinal": false, "isCancel": false, "isWarn": true,
+            "isTraining": true, "isAssumption": false, "isSea": false,
+            "AnnouncedTime": new Date().toISOString().replace("T", " ").substring(0, 19),
+            "OriginTime": oS, "Hypocenter": "東京湾", "Latitude": 35.5, "Longitude": 139.8,
+            "Magunitude": "7.5", "Depth": "30", "MaxIntensity": "6強",
+            "WarnArea": { "Chiiki": "東京、神奈川、千葉、埼玉、茨城" }, "OriginalText": "テストEEW第2報"
+        });
+    }, 6000);
+
+    // 4. EEW 2 Cancel
+    setTimeout(() => {
+        updateWolfxEEW({
+            "type": "jma_eew", "EventID": "DEBUG_EEW_2", "Title": "緊急地震速報（取消）",
+            "Serial": "2", "isFinal": false, "isCancel": true, "isWarn": false,
+            "isTraining": true, "isAssumption": false,
+            "AnnouncedTime": new Date().toISOString().replace("T", " ").substring(0, 19)
+        });
+    }, 9000);
+
+    // 5. EEW 1 Final
+    setTimeout(() => {
+        const oS = new Date(Date.now() - 15000).toISOString().replace("T", " ").substring(0, 19);
+        updateWolfxEEW({
+            "type": "jma_eew", "EventID": "DEBUG_EEW_1", "Title": "緊急地震速報（警報）",
+            "Serial": "3", "isFinal": true, "isCancel": false, "isWarn": true,
+            "isTraining": true, "isAssumption": false, "isSea": false,
+            "AnnouncedTime": new Date().toISOString().replace("T", " ").substring(0, 19),
+            "OriginTime": oS, "Hypocenter": "東京湾", "Latitude": 35.5, "Longitude": 139.8,
+            "Magunitude": "7.5", "Depth": "30", "MaxIntensity": "6強",
+            "WarnArea": { "Chiiki": "東京、神奈川、千葉、埼玉、茨城" }, "OriginalText": "テストEEW最終報"
+        });
+    }, 12000);
+
+    // 6. Scale Prompt (震度速報)
+    setTimeout(() => {
+        const mE = {
+            code: 551, issue: { type: "ScalePrompt", time: new Date().toISOString().replace("T", " ").substring(0, 19) },
+            earthquake: { time: new Date().toISOString().replace("T", " ").substring(0, 19), hypocenter: { name: "", latitude: -200, longitude: -200, depth: -1, magnitude: -1 }, maxScale: 60, domesticTsunami: "Checking" },
+            points: [{ pref: "東京都", addr: "東京23区", scale: 60 }], comments: { freeFormComment: "テスト震度速報" }
+        };
+        window.latestFullQuakeList = [mE];
+        loadQuakes();
+    }, 18000);
+
+    // 7. Destination (震源情報)
+    setTimeout(() => {
+        const mE = {
+            code: 551, issue: { type: "Destination", time: new Date().toISOString().replace("T", " ").substring(0, 19) },
+            earthquake: { time: window.latestFullQuakeList[0].earthquake.time, hypocenter: { name: "東京湾", latitude: 35.5, longitude: 139.8, depth: 30, magnitude: 7.5 }, maxScale: 60, domesticTsunami: "Warning" },
+            points: [{ pref: "東京都", addr: "東京23区", scale: 60 }], comments: { freeFormComment: "テスト震源情報" }
+        };
+        window.latestFullQuakeList = [mE];
+        loadQuakes();
+    }, 24000);
+
+    // 8. Tsunami Warning (大津波、津波、注意報、予報)
+    setTimeout(() => {
+        const td = {
+            code: 552, cancelled: false, issue: { time: new Date().toISOString().replace("T", " ").substring(0, 19) },
+            areas: [
+                { name: "東京湾内", grade: "MajorWarning", maxHeight: { description: "10m超" } },
+                { name: "千葉県内房", grade: "Warning", maxHeight: { description: "3m" } },
+                { name: "神奈川県", grade: "Watch", maxHeight: { description: "1m" } },
+                { name: "静岡県", grade: "SlightChange", maxHeight: { description: "0.2m未満" } }
+            ]
+        };
+        currentTsunamiData = td;
+        updateTsunamiDisplay(td, window.latestFullQuakeList[0].earthquake);
+        seTsunami.currentTime = 0; seTsunami.play().catch(e=>{});
+        speakText("大津波警報、津波警報、津波注意報が発表されました。海岸から離れてください。");
+    }, 30000);
+    
+    // 9. Final EQ Info (地震情報)
+    setTimeout(() => {
+        const mE = {
+            code: 551, issue: { type: "DetailScale", time: new Date().toISOString().replace("T", " ").substring(0, 19) },
+            earthquake: { time: window.latestFullQuakeList[0].earthquake.time, hypocenter: { name: "東京湾", latitude: 35.5, longitude: 139.8, depth: 30, magnitude: 7.5 }, maxScale: 60, domesticTsunami: "MajorWarning" },
+            points: [{ pref: "東京都", addr: "東京23区", scale: 60 }, { pref: "神奈川県", addr: "横浜", scale: 50 }], comments: { freeFormComment: "テスト地震情報" }
+        };
+        window.latestFullQuakeList = [mE];
+        loadQuakes();
+    }, 36000);
 }
-function generateMockKyoshin(){const it=new Array(sites.length).fill(0), el=(Date.now()-debugStartTime+3000)/1000; for(let i=0;i<sites.length;i++){let d=getDistance(33.0,136.0,sites[i].lat,sites[i].lng); if(d<el*4.9){let lv=180-(d*0.15); it[i]=Math.max(0,Math.min(190,Math.floor(lv)));}else if(d<el*9.1)it[i]=110;} return {realTimeData:{intensity:it}};}
-async function applyNankaiMockData(){const mE={code:551,issue:{type:"DetailScale"},earthquake:{time:new Date(debugStartTime-3000).toISOString().replace("T"," ").substring(0,19),hypocenter:{name:"和歌山県南方沖",latitude:33.0,longitude:136.0,depth:10,magnitude:9.1},maxScale:70,domesticTsunami:"Warning"},points:[{pref:"和歌山県",addr:"和歌山県",scale:70}],comments:{freeFormComment:"テスト"}}; window.latestFullQuakeList=[mE]; updateCommentDisplay(mE); updateLPGMDisplay(9.1,10); isRealtimeOnlyMode=false; document.getElementById('btnNormalMode').classList.add('active'); document.getElementById('btnRealtimeMode').classList.remove('active'); window.currentEarthquakeData=mE.earthquake; window.currentEarthquakePoints=mE.points; window.currentEarthquakeIssue=mE.issue; selectedHistoryQuake=null; updateLeafletMap(mE.earthquake,mE.points,mE.issue); currentQuakeList=[mE]; renderHistoryPanel(); renderLatestPanel(); seUpdateApi.currentTime=0; seUpdateApi.play().catch(e=>{});}
+
+function generateMockKyoshin(){const it=new Array(sites.length).fill(0), el=(Date.now()-debugStartTime+3000)/1000; for(let i=0;i<sites.length;i++){let d=getDistance(35.5,139.8,sites[i].lat,sites[i].lng); if(d<el*4.9){let lv=180-(d*0.15); it[i]=Math.max(0,Math.min(190,Math.floor(lv)));}else if(d<el*9.1)it[i]=110;} return {realTimeData:{intensity:it}};}
 
 let isEEWActive=false, eewWaveTimer=null, activeEEWs=new Map(), eewPollTimers=new Map(), eewTimeoutTimers=new Map(), eewOffsets=new Map(), eewPredictedStyles=new Map(), eewRealtimeMaxLv=new Map();
 const KYOSHIN_COLORS=["#000033","#000066","#000099","#0000cc","#0000ff","#0066ff","#00ccff","#00ffff","#66ffcc","#99ff99","#ccff66","#ffff00","#ffcc00","#ff9900","#ff6600","#ff3300","#ff0000","#cc0000","#990000","#660000","#800080"];
@@ -973,7 +1090,6 @@ function limitIntensity(c,m){return fmt.intensityToNum(c)>fmt.intensityToNum(m)?
 function getMinInstrumental(s){if(s==="1")return 0.5;if(s==="2")return 1.5;if(s==="3")return 2.5;if(s==="4")return 3.5;if(s.includes("5弱"))return 4.5;if(s.includes("5強"))return 5.0;if(s.includes("6弱"))return 5.5;if(s.includes("6強"))return 6.0;if(s==="7")return 6.5;return 0;}
 async function calculateEewOffset(ew){if(!ew.isSea||!ew.MaxIntensity)return 0; const el=parseFloat(ew.Latitude), eo=parseFloat(ew.Longitude), m=parseFloat(ew.Magunitude), d=parseInt(ew.Depth); if(isNaN(el)||isNaN(eo))return 0; let mD=Infinity, nL=el, nO=eo, nN="", nI=null; if(prefData?.features)prefData.features.forEach((f,i)=>{const nm=f.properties.name||f.properties.nam_ja||f.properties.code, pt=getPolygonPoint(f), ds=getDistance(el,eo,pt.lat,pt.lng); if(ds<mD){mD=ds;nL=pt.lat;nO=pt.lng;nN=nm;nI=f.id||nm||`feat_${i}`;}}); const mr=await calcPredictedIntensityRaw(m,d,el,eo,nL,nO,nN,nI), tr=getMinInstrumental(ew.MaxIntensity); return tr>mr?tr-mr:0;}
 
-// --- 予測長周期地震動 精度向上版 ---
 function calcLPGM(m,d){
     if(m===null||m===undefined||m===-1)return 0; 
     const mf=parseFloat(m), df=parseFloat(d)||0; 
@@ -1060,7 +1176,6 @@ function updateLeafletMap(e,p,i,skp=false){
     const ar=document.getElementById("detailScrollArea"); if(ar&&p?.length>0){ar.innerHTML=""; [...p].sort((a,b)=>b.scale-a.scale).forEach(pt=>{const s=fmt.shindo(pt.scale,e?.hypocenter?.depth), c=scaleColor(s); let lpgmH = pt.lpgmInt ? `<div class="detailLpgmBox">長周期 階級${pt.lpgmInt}</div>` : ""; ar.innerHTML+=`<div class="detailItem"><div class="detailScaleBox" style="background:${c};color:${getContrastColor(c)}">${s}</div><div class="detailPlace">${pt.pref} ${pt.addr||''}</div>${lpgmH}</div>`;}); ar.scrollTop=0; startAutoScroll("detailScrollArea"); applyAppearance();}
 }
 
-// EEWローテーション・描画処理の統合
 let currentEewDisplayIndex = 0;
 let eewDisplayRotationTimer = null;
 let eewMiniMaps = new Map();
@@ -1100,17 +1215,19 @@ function renderLatestPanel() {
         if(d.isTraining) th += `<span class="tag" style="background:#a855f7;color:#fff;">訓練</span>`;
         if(d.isAssumption) th += `<span class="tag" style="background:#3b82f6;color:#fff;">PLUM法</span>`;
         
+        let infoStr = d.isCancel ? `<div class="latestSub" style="color:#CCC; font-size:24px;">取り消されました</div>` : `<div class="latestSub" style="color:#FFFF00; font-size:28px; font-weight:bold;">${d.Hypocenter}</div>
+        <div style="font-size:16px;">
+            <span class="tag" style="background:rgba(0,0,0,0.6); color:#00BFFF; border: 1px solid #00BFFF;">M${d.Magunitude}</span>
+            <span class="tag" style="background:rgba(0,0,0,0.6); color:#fff; border: 1px solid #fff;">${fmt.depth(d.Depth)}</span>
+            <span style="margin-left:8px; color:#CCC;">${(d.AnnouncedTime||"").slice(11,19)} 発表</span>
+        </div>`;
+
         lt.innerHTML = `
-            <div class="latestWrap" style="border:4px solid ${d.isWarn ? '#FF0000' : '#FFFF00'}; background: #0A0A0A; padding: 8px;">
+            <div class="latestWrap" style="border:4px solid ${d.isWarn ? '#FF0000' : (d.isCancel ? '#666' : '#FFFF00')}; background: #0A0A0A; padding: 8px;">
                 <div class="latestScale" style="background:${sc};color:${stc};font-size:${efs}; border: 2px solid ${sc}; width: 100px; height: 100px;">${ms}</div>
                 <div class="latestLeft">
-                    <div class="latestTitle" style="color:${d.isWarn ? '#FF0000' : '#FFFF00'}; font-size: 16px;">${th}${d.Title} 第${d.Serial}${d.isFinal?'(最終)':''}報</div>
-                    <div class="latestSub" style="color:#FFFF00; font-size:28px; font-weight:bold;">${d.Hypocenter}</div>
-                    <div style="font-size:16px;">
-                        <span class="tag" style="background:rgba(0,0,0,0.6); color:#00BFFF; border: 1px solid #00BFFF;">M${d.Magunitude}</span>
-                        <span class="tag" style="background:rgba(0,0,0,0.6); color:#fff; border: 1px solid #fff;">${fmt.depth(d.Depth)}</span>
-                        <span style="margin-left:8px; color:#CCC;">${d.AnnouncedTime.slice(11,19)} 発表</span>
-                    </div>
+                    <div class="latestTitle" style="color:${d.isWarn ? '#FF0000' : (d.isCancel ? '#CCC' : '#FFFF00')}; font-size: 16px;">${th}${d.Title} 第${d.Serial}${d.isFinal?'(最終)':''}報</div>
+                    ${infoStr}
                 </div>
             </div>
         `;
@@ -1173,7 +1290,7 @@ function renderEewCards() {
         cn.appendChild(cd);
     }
 
-    cd.className = "eewCard active" + (d.isWarn ? " warning" : "");
+    cd.className = "eewCard active" + (d.isCancel ? " cancel" : (d.isWarn ? " warning" : ""));
     const ms = d.MaxIntensity || "0";
     const sc = scaleColor(ms);
     const stc = getContrastColor(sc);
@@ -1184,19 +1301,20 @@ function renderEewCards() {
     if (d.isAssumption) th += `<span class="tag" style="background:#3b82f6;color:#fff;">PLUM法</span>`;
     
     let ah = "";
-    if (d.Forecast?.length) ah = `<div class="eewAreas">【予測地域】<br>${d.Forecast.map(f => f.Intensity?.To ? `${f.Name}(最大${f.Intensity.To})` : f.Name).join("、")}</div>`;
-    else if (d.WarnArea?.Chiiki) ah = `<div class="eewAreas">【予測地域】<br>${d.WarnArea.Chiiki}</div>`;
+    if (d.Forecast?.length && !d.isCancel) ah = `<div class="eewAreas">【予測地域】<br>${d.Forecast.map(f => f.Intensity?.To ? `${f.Name}(最大${f.Intensity.To})` : f.Name).join("、")}</div>`;
+    else if (d.WarnArea?.Chiiki && !d.isCancel) ah = `<div class="eewAreas">【予測地域】<br>${d.WarnArea.Chiiki}</div>`;
 
     const mapId = `eewMiniMap_${id}`;
     let mapHtml = `<div id="${mapId}" class="eew-mini-map"></div>`;
+    
+    let eewSub = d.isCancel ? `<div class="eewEpicenter" style="color:#aaa; font-size:18px;">この緊急地震速報は取り消されました</div>` : `<div class="eewEpicenter">${d.Hypocenter}</div><div class="eewSubInfo"><span>M${d.Magunitude}</span><span>${fmt.depth(d.Depth)}</span></div>`;
 
     cd.innerHTML = `
         <div class="eewHeader"><span style="display:flex;align-items:center;">${th}${d.Title} 第${d.Serial}${d.isFinal?'(最終)':''}報</span></div>
         <div class="eewBody">
             <div class="eewScaleBox" style="background:${sc};color:${stc};border:3px solid ${sc};font-size:${efs};">${ms}</div>
             <div class="eewInfoBox">
-                <div class="eewEpicenter">${d.Hypocenter}</div>
-                <div class="eewSubInfo"><span>M${d.Magunitude}</span><span>${fmt.depth(d.Depth)}</span></div>
+                ${eewSub}
             </div>
         </div>
         ${ah}
@@ -1204,8 +1322,8 @@ function renderEewCards() {
     `;
 
     setTimeout(() => {
-        const eL = parseFloat(d.Latitude);
-        const eO = parseFloat(d.Longitude);
+        const eL = parseFloat(d.InitialLatitude || d.Latitude);
+        const eO = parseFloat(d.InitialLongitude || d.Longitude);
         if (!eewMiniMaps.has(id)) {
             let m = L.map(mapId, {
                 zoomControl: false, attributionControl: false, 
@@ -1252,11 +1370,49 @@ function clearEEWDisplay(eid=null){
 async function updateWolfxEEW(d){
     if(d.type!=="jma_eew")return; const id=d.EventID||"wfx-tmp";
     if(d.OriginalText){const ex=Date.now()+3600000, exg=window.eewOriginalTextList.find(x=>x.id===id); if(exg){exg.text=d.OriginalText; exg.expiry=ex;}else{window.eewOriginalTextList.push({id:id,text:d.OriginalText,expiry:ex});} updateCommentDisplay(selectedHistoryQuake||(window.latestFullQuakeList?window.latestFullQuakeList.find(x=>x.code===551):null));}
-    let isN=!activeEEWs.has(id), pD=activeEEWs.get(id);
-    if(isN||(pD&&pD.Serial!==d.Serial)){let bT=`最大震度: ${d.MaxIntensity||"不明"}\n震源地: ${d.Hypocenter}\n規模: M${d.Magunitude} 深さ: ${fmt.depth(d.Depth)}`; if(d.WarnArea?.Chiiki)bT+=`\n【予測地域】\n${d.WarnArea.Chiiki}`; else if(d.Forecast?.length)bT+=`\n【予測地域】\n${d.Forecast.map(f=>f.Intensity?.To?`${f.Name}(最大${f.Intensity.To})`:f.Name).join("、")}`; sendPushNotification(`${d.Title} 第${d.Serial}${d.isFinal?'(最終)':''}報`,{body:bT,icon:getPushIconDataURL(d.MaxIntensity||"?",scaleColor(d.MaxIntensity||"0"),getContrastColor(scaleColor(d.MaxIntensity||"0"))),tag:"eew_"+id});}
-    if(d.isCancel){seLast.currentTime=0; seLast.play().catch(e=>{}); sendPushNotification(`EEW 取消報`,{body:`取り消されました`,icon:getPushIconDataURL("取消","#555","#fff"),tag:"eew_"+id}); setTimeout(()=>{addLog(`EEW [${id}] キャンセル。`); clearEEWDisplay(id); if(!isEEWActive)loadQuakes();},10000); return;}
     
-    let isSU=pD&&pD.Serial!==d.Serial; if(isN){playEEWBeep(); seFirst.currentTime=0; seFirst.play().catch(e=>{});}else if(isSU){seUpdateEew.currentTime=0; seUpdateEew.play().catch(e=>{}); speakText(`緊急地震速報、更新。推定最大震度、${(d.MaxIntensity||"不明").replace("強","きょう").replace("弱","じゃく")}`);} if(d.isFinal){seLast.currentTime=0; seLast.play().catch(e=>{});} if(d.MaxIntensity==="7"){seWarning.currentTime=0; seWarning.play().catch(e=>{});}
+    let isN = !activeEEWs.has(id), pD = activeEEWs.get(id);
+    if (!isN && pD) {
+        d.InitialLatitude = pD.InitialLatitude !== undefined ? pD.InitialLatitude : pD.Latitude;
+        d.InitialLongitude = pD.InitialLongitude !== undefined ? pD.InitialLongitude : pD.Longitude;
+    } else {
+        d.InitialLatitude = d.Latitude;
+        d.InitialLongitude = d.Longitude;
+    }
+
+    if(d.isCancel) {
+        seLast.currentTime=0; seLast.play().catch(e=>{});
+        speakText("先ほどの緊急地震速報は取り消されました。");
+        sendPushNotification(`EEW 取消報`,{body:`取り消されました`,icon:getPushIconDataURL("取消","#555","#fff"),tag:"eew_"+id});
+        d.Title = "緊急地震速報 (取消)";
+        d.MaxIntensity = "-";
+        d.Hypocenter = "取り消されました";
+        activeEEWs.set(id, d);
+        isEEWActive = true;
+        renderLatestPanel();
+        renderEewCards();
+        setTimeout(()=>{addLog(`EEW [${id}] キャンセル。`); clearEEWDisplay(id); if(!isEEWActive)loadQuakes();}, 15000);
+        return;
+    }
+
+    if(isN||(pD&&pD.Serial!==d.Serial)){let bT=`最大震度: ${d.MaxIntensity||"不明"}\n震源地: ${d.Hypocenter}\n規模: M${d.Magunitude} 深さ: ${fmt.depth(d.Depth)}`; if(d.WarnArea?.Chiiki)bT+=`\n【予測地域】\n${d.WarnArea.Chiiki}`; else if(d.Forecast?.length)bT+=`\n【予測地域】\n${d.Forecast.map(f=>f.Intensity?.To?`${f.Name}(最大${f.Intensity.To})`:f.Name).join("、")}`; sendPushNotification(`${d.Title} 第${d.Serial}${d.isFinal?'(最終)':''}報`,{body:bT,icon:getPushIconDataURL(d.MaxIntensity||"?",scaleColor(d.MaxIntensity||"0"),getContrastColor(scaleColor(d.MaxIntensity||"0"))),tag:"eew_"+id});}
+    
+    let isSU=pD&&pD.Serial!==d.Serial; 
+    if(isN) {
+        playEEWBeep(); seFirst.currentTime=0; seFirst.play().catch(e=>{});
+    } else if(isSU && !d.isFinal) {
+        seUpdateEew.currentTime=0; seUpdateEew.play().catch(e=>{}); 
+        speakText(`緊急地震速報、第${d.Serial}報。推定最大震度、${(d.MaxIntensity||"不明").replace("強","きょう").replace("弱","じゃく")}`);
+    } 
+    
+    if(d.isFinal){
+        seLast.currentTime=0; seLast.play().catch(e=>{});
+        speakText(`緊急地震速報、最終第${d.Serial}報。推定最大震度、${(d.MaxIntensity||"不明").replace("強","きょう").replace("弱","じゃく")}`);
+    } 
+    
+    if(d.MaxIntensity==="7" && isN){
+        seWarning.currentTime=0; seWarning.play().catch(e=>{});
+    }
     
     isEEWActive=true; updateTsunamiDisplay(currentTsunamiData,window.currentEarthquakeData); if(latestQuakeMarker)latestQuakeMarker.setOpacity(0); if(obsLayer)obsLayer.clearLayers(); activeEEWs.set(id,d); updateLPGMDisplay(d.Magunitude,d.Depth);
     
