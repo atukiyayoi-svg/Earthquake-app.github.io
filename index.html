@@ -431,7 +431,7 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
     </div>
 </div>
 
-<div id="wsLogPanel">-- SYSTEM READY --<br>※「1」キーで全機能デバッグテスト開始<br>※「2」キーでログ表示/非表示切替</div>
+<div id="wsLogPanel">-- SYSTEM READY --<br>※「2」キーでログ表示/非表示切替</div>
 
 <div id="settingsModal">
     <div class="settingsHeader">各種設定 <button id="btnCloseSettings">×</button></div>
@@ -1186,6 +1186,16 @@ document.getElementById('btnWeatherWarningMap').addEventListener('click', ()=>{
     refreshMapDisplay();
 });
 
+function getZoomByMagnitude(mag) {
+    const m = parseFloat(mag);
+    if(isNaN(m)) return 8;
+    if(m >= 8.0) return 5;
+    if(m >= 7.0) return 5.5;
+    if(m >= 6.0) return 6;
+    if(m >= 5.0) return 7;
+    return 8;
+}
+
 function refreshMapDisplay(){
     const eD=selectedHistoryQuake?selectedHistoryQuake.earthquake:window.currentEarthquakeData, 
           eP=selectedHistoryQuake?selectedHistoryQuake.points:window.currentEarthquakePoints, 
@@ -1242,126 +1252,9 @@ function renderHistoryPanel(){
     applyAppearance();
 }
 
-let isDebugNankai=false, debugStartTime=0; document.addEventListener('keydown', e=>{if(e.key==='1'){if(!isDebugNankai)triggerNankaiDebug();}else if(e.key==='2'){const p=document.getElementById("wsLogPanel"); if(p)p.style.display=(p.style.display==='none'||p.style.display==='')?'block':'none';}});
+let isDebugNankai=false; document.addEventListener('keydown', e=>{if(e.key==='2'){const p=document.getElementById("wsLogPanel"); if(p)p.style.display=(p.style.display==='none'||p.style.display==='')?'block':'none';}});
 
-function triggerNankaiDebug() {
-    isDebugNankai = true;
-    debugStartTime = Date.now();
-    addLog("【DEBUG】フルシミュレーション開始 (全機能網羅)");
-
-    // 1. 巨大地震警戒 (Mega Quake)
-    setTimeout(() => {
-        megaQuakeStatus.nankai = "南海トラフ地震臨時情報（巨大地震警戒）";
-        megaQuakeStatus.nankaiTime = Date.now();
-        updateMegaQuakeAlertPanel();
-        updateMegaQuakeTelop();
-        speakText("南海トラフ地震臨時情報、巨大地震警戒が発表されました。");
-    }, 1000);
-
-    // 2. 気象警報 (Weather Warning)
-    setTimeout(() => {
-        activeWeatherWarnings["東京都"] = { level: 3, kinds: ["大雨特別警報", "暴風警報"] };
-        activeWeatherWarnings["静岡県"] = { level: 2, kinds: ["大雨警報"] };
-        if(isWeatherWarningMapMode) refreshMapDisplay();
-    }, 3000);
-
-    // 3. 揺れ検知 (Shake Detect) - 仮想サイト
-    setTimeout(() => {
-        const mockSites = [
-            { lat: 34.7, lng: 137.7, lv: 15, time: Date.now() },
-            { lat: 34.8, lng: 137.8, lv: 12, time: Date.now() },
-            { lat: 34.9, lng: 137.9, lv: 10, time: Date.now() },
-            { lat: 35.0, lng: 138.0, lv: 8, time: Date.now() },
-            { lat: 35.1, lng: 138.1, lv: 7, time: Date.now() }
-        ];
-        handleShakeDetection(mockSites, { startTime: Date.now() });
-    }, 5000);
-
-    // 4. 同時地震 EEW1 (南海) & EEW2 (関東)
-    setTimeout(() => {
-        const oS1 = new Date(Date.now() - 5000).toISOString().replace("T", " ").substring(0, 19);
-        updateWolfxEEW({
-            "type": "jma_eew", "EventID": "DEBUG_EEW_NANKAI", "Title": "緊急地震速報（警報）",
-            "Serial": "1", "isFinal": false, "isCancel": false, "isWarn": true,
-            "isTraining": true, "isAssumption": false, "isSea": true,
-            "AnnouncedTime": new Date().toISOString().replace("T", " ").substring(0, 19),
-            "OriginTime": oS1, "Hypocenter": "遠州灘", "Latitude": 34.5, "Longitude": 137.5,
-            "Magunitude": "8.5", "Depth": "10", "MaxIntensity": "7",
-            "WarnArea": { "Chiiki": "静岡、愛知、三重、和歌山、高知" }, "OriginalText": "テストEEW第1報(南海)"
-        });
-
-        const oS2 = new Date(Date.now() - 2000).toISOString().replace("T", " ").substring(0, 19);
-        updateWolfxEEW({
-            "type": "jma_eew", "EventID": "DEBUG_EEW_KANTO", "Title": "緊急地震速報（警報）",
-            "Serial": "1", "isFinal": false, "isCancel": false, "isWarn": true,
-            "isTraining": true, "isAssumption": false, "isSea": false,
-            "AnnouncedTime": new Date().toISOString().replace("T", " ").substring(0, 19),
-            "OriginTime": oS2, "Hypocenter": "東京湾", "Latitude": 35.5, "Longitude": 139.8,
-            "Magunitude": "7.3", "Depth": "30", "MaxIntensity": "6強",
-            "WarnArea": { "Chiiki": "東京、神奈川、千葉" }, "OriginalText": "テストEEW第1報(関東)"
-        });
-    }, 8000);
-
-    // 5. EEW 更新 (P波・S波が広がるのを確認するため時間を置く)
-    setTimeout(() => {
-        const oS1 = new Date(Date.now() - 15000).toISOString().replace("T", " ").substring(0, 19);
-        updateWolfxEEW({
-            "type": "jma_eew", "EventID": "DEBUG_EEW_NANKAI", "Title": "緊急地震速報（警報）",
-            "Serial": "2", "isFinal": false, "isCancel": false, "isWarn": true,
-            "isTraining": true, "isAssumption": false, "isSea": true,
-            "AnnouncedTime": new Date().toISOString().replace("T", " ").substring(0, 19),
-            "OriginTime": oS1, "Hypocenter": "遠州灘", "Latitude": 34.5, "Longitude": 137.5,
-            "Magunitude": "8.8", "Depth": "10", "MaxIntensity": "7",
-            "WarnArea": { "Chiiki": "西日本広域" }, "OriginalText": "テストEEW第2報(南海)"
-        });
-    }, 18000);
-
-    // 6. 大津波警報 (Tsunami)
-    setTimeout(() => {
-        const td = {
-            code: 552, cancelled: false, issue: { time: new Date().toISOString().replace("T", " ").substring(0, 19) },
-            areas: [
-                { name: "静岡県", grade: "MajorWarning", maxHeight: { description: "10m超" }, immediate: true },
-                { name: "愛知県外海", grade: "MajorWarning", maxHeight: { description: "10m超" }, immediate: true },
-                { name: "三重県南部", grade: "Warning", maxHeight: { description: "3m" } },
-                { name: "和歌山県", grade: "Watch", maxHeight: { description: "1m" } }
-            ]
-        };
-        currentTsunamiData = td;
-        updateTsunamiDisplay(td, window.latestFullQuakeList?.[0]?.earthquake);
-        seTsunami.currentTime = 0; seTsunami.play().catch(e=>{});
-        speakText("大津波警報、津波警報、津波注意報が発表されました。海岸から離れてください。");
-    }, 25000);
-
-    // 7. 長周期地震動 (LPGM)
-    setTimeout(() => {
-        updateLPGMDisplay(8.8, 10);
-    }, 30000);
-
-    // 8. 震度速報
-    setTimeout(() => {
-        const mE = {
-            code: 551, issue: { type: "ScalePrompt", time: new Date().toISOString().replace("T", " ").substring(0, 19) },
-            earthquake: { time: new Date().toISOString().replace("T", " ").substring(0, 19), hypocenter: { name: "", latitude: -200, longitude: -200, depth: -1, magnitude: -1 }, maxScale: 70, domesticTsunami: "Checking" },
-            points: [{ pref: "静岡県", addr: "静岡県西部", scale: 70 }, { pref: "愛知県", addr: "愛知県東部", scale: 60 }], comments: { freeFormComment: "テスト震度速報 (南海)" }
-        };
-        window.latestFullQuakeList = [mE];
-        loadQuakes();
-    }, 35000);
-    
-    // 9. 地震情報 (詳細)
-    setTimeout(() => {
-        const mE = {
-            code: 551, issue: { type: "DetailScale", time: new Date().toISOString().replace("T", " ").substring(0, 19) },
-            earthquake: { time: window.latestFullQuakeList[0].earthquake.time, hypocenter: { name: "遠州灘", latitude: 34.5, longitude: 137.5, depth: 10, magnitude: 8.8 }, maxScale: 70, domesticTsunami: "MajorWarning", maxLpgmInt: 4 },
-            points: [{ pref: "静岡県", addr: "浜松", scale: 70, lpgmInt: 4 }, { pref: "愛知県", addr: "豊橋", scale: 60, lpgmInt: 4 }], comments: { freeFormComment: "テスト地震情報 (南海)" }
-        };
-        window.latestFullQuakeList = [mE];
-        loadQuakes();
-    }, 45000);
-}
-
-function generateMockKyoshin(){const it=new Array(sites.length).fill(0), el=(Date.now()-debugStartTime+3000)/1000; for(let i=0;i<sites.length;i++){let d=getDistance(35.5,139.8,sites[i].lat,sites[i].lng); if(d<el*4.9){let lv=180-(d*0.15); it[i]=Math.max(0,Math.min(190,Math.floor(lv)));}else if(d<el*9.1)it[i]=110;} return {realTimeData:{intensity:it}};}
+function generateMockKyoshin(){return {realTimeData:{intensity:[]}};}
 
 let isEEWActive=false, eewWaveTimer=null, activeEEWs=new Map(), eewPollTimers=new Map(), eewTimeoutTimers=new Map(), eewOffsets=new Map(), eewPredictedStyles=new Map(), eewRealtimeMaxLv=new Map();
 const KYOSHIN_COLORS=["#000033","#000066","#000099","#0000cc","#0000ff","#0066ff","#00ccff","#00ffff","#66ffcc","#99ff99","#ccff66","#ffff00","#ffcc00","#ff9900","#ff6600","#ff3300","#ff0000","#cc0000","#990000","#660000","#800080"];
@@ -1455,13 +1348,12 @@ function updateEewGeojsonStyles(){
 }
 
 function updateLeafletMap(e,p,i,skp=false){
-    if(isEEWActive)return; if(obsLayer)obsLayer.clearLayers(); let bd=null, hsP=false;
-    if(e?.hypocenter){const{latitude:la,longitude:lo}=e.hypocenter; if(la&&la!==-200&&(i?.type!=="ScalePrompt")){bd=L.latLngBounds([la,lo],[la,lo]); if(latestQuakeMarker)latestQuakeMarker.setLatLng([la,lo]);else latestQuakeMarker=L.marker([la,lo],{icon:L.divIcon({className:'epicenter-icon',html:'×',iconSize:[50,50],iconAnchor:[25,25]}),pane:'epicenterPane'}).addTo(lMap); latestQuakeMarker.setOpacity((isRealtimeOnlyMode&&!selectedHistoryQuake)||isEEWActive||isWeatherWarningMapMode?0:1);}else if(latestQuakeMarker)latestQuakeMarker.setOpacity(0);}
+    if(isEEWActive)return; if(obsLayer)obsLayer.clearLayers(); let hsP=false;
+    if(e?.hypocenter){const{latitude:la,longitude:lo}=e.hypocenter; if(la&&la!==-200&&(i?.type!=="ScalePrompt")){if(latestQuakeMarker)latestQuakeMarker.setLatLng([la,lo]);else latestQuakeMarker=L.marker([la,lo],{icon:L.divIcon({className:'epicenter-icon',html:'×',iconSize:[50,50],iconAnchor:[25,25]}),pane:'epicenterPane'}).addTo(lMap); latestQuakeMarker.setOpacity((isRealtimeOnlyMode&&!selectedHistoryQuake)||isEEWActive||isWeatherWarningMapMode?0:1);}else if(latestQuakeMarker)latestQuakeMarker.setOpacity(0);}
     if(geojsonLayer&&p){
         const aM={}; let hO=isEEWActive||(isRealtimeOnlyMode&&!selectedHistoryQuake)||isWeatherWarningMapMode;
         p.forEach(pt=>{let an=pt.isArea?pt.addr:null; if(!pt.isArea&&typeof JMAPoints!=='undefined'&&window.jmaStationsJson){let ix=JMAPoints.indexOf(pt.addr); if(ix!==-1&&window.jmaStationsJson[ix].area)an=window.jmaStationsJson[ix].area.name;} if(!an)an=pt.addr; if(!aM[an]||pt.scale>aM[an])aM[an]=pt.scale; if(userSettings.showObsPoints&&!hO&&!pt.isArea&&typeof JMAPoints!=='undefined'&&window.jmaStationsJson){let ix=JMAPoints.indexOf(pt.addr); if(ix!==-1){let sl=window.jmaStationsJson[ix].lat, slo=window.jmaStationsJson[ix].lon, sc=pt.scale, im="source/jqk_int"+(sc==45?"50":sc==50?"55":sc==55?"60":sc==60?"65":sc==70?"7":sc/10)+".png"; if(sc==46)im="source/jqk_int_.png"; let mk=L.marker([sl,slo],{icon:L.icon({iconUrl:im,iconSize:[16,16]}),zIndexOffset:sc*100}); obsLayer.addLayer(mk);}}});
         if((i?.type==="ScalePrompt"||i?.type==="Destination")&&!hO){geojsonLayer.eachLayer(l=>{const nm=l.feature.properties.name||l.feature.properties.nam_ja||l.feature.properties.code, sc=aM[nm]; if(sc>=10){const pt=getPolygonPoint(l.feature), im="source/jqk_int"+(sc==45?"50":sc==50?"55":sc==55?"60":sc==60?"65":sc==70?"7":sc/10)+".png"; let mk=L.marker([pt.lat,pt.lng],{icon:L.icon({iconUrl:sc==46?"source/jqk_int_.png":im,iconSize:[20,20]}),zIndexOffset:sc*100}); obsLayer.addLayer(mk);}});}
-        geojsonLayer.eachLayer(l=>{const nm=l.feature.properties.name||l.feature.properties.nam_ja||l.feature.properties.code, sc=aM[nm]; if(sc>=10){if(!bd)bd=l.getBounds();else bd.extend(l.getBounds()); hsP=true;}});
         
         if(!isWeatherWarningMapMode) {
             geojsonLayer.setStyle(f=>{
@@ -1475,7 +1367,17 @@ function updateLeafletMap(e,p,i,skp=false){
             });
         }
     }
-    if(!skp&&bd&&!isWeatherWarningMapMode){if(hsP)lMap.flyToBounds(bd,{padding:[30,30],maxZoom:8,duration:1.5}); else if(e?.hypocenter?.latitude)lMap.flyTo([e.hypocenter.latitude,e.hypocenter.longitude],8,{duration:1.5});}
+    if(!skp&&e?.hypocenter?.latitude&&!isWeatherWarningMapMode){
+        let zoomLvl = 8;
+        const m = parseFloat(e.hypocenter.magnitude);
+        if(!isNaN(m) && m !== -1){
+            if(m >= 8.0) zoomLvl = 5;
+            else if(m >= 7.0) zoomLvl = 5.5;
+            else if(m >= 6.0) zoomLvl = 6;
+            else if(m >= 5.0) zoomLvl = 7;
+        }
+        lMap.flyTo([e.hypocenter.latitude, e.hypocenter.longitude], zoomLvl, {duration:1.5});
+    }
     const ar=document.getElementById("detailScrollArea"); if(ar&&p?.length>0){ar.innerHTML=""; [...p].sort((a,b)=>b.scale-a.scale).forEach(pt=>{const s=fmt.shindo(pt.scale,e?.hypocenter?.depth), c=scaleColor(s); let lpgmH = pt.lpgmInt ? `<div class="detailLpgmBox">長周期 階級${pt.lpgmInt}</div>` : ""; ar.innerHTML+=`<div class="detailItem"><div class="detailScaleBox" style="background:${c};color:${getContrastColor(c)}">${s}</div><div class="detailPlace">${pt.pref} ${pt.addr||''}</div>${lpgmH}</div>`;}); ar.scrollTop=0; startAutoScroll("detailScrollArea"); applyAppearance();}
 }
 
@@ -1736,10 +1638,8 @@ async function updateWolfxEEW(d){
     } else if(isSU && !d.isFinal) {
         if(isLocationUpdated) {
             seUpdateApi.currentTime=0; seUpdateApi.play().catch(e=>{});
-            speakText(`緊急地震速報、第${d.Serial}報。震源位置が更新されました。推定最大震度、${(d.MaxIntensity||"不明").replace("強","きょう").replace("弱","じゃく")}`);
         } else {
             seUpdateEew.currentTime=0; seUpdateEew.play().catch(e=>{}); 
-            speakText(`緊急地震速報、第${d.Serial}報。推定最大震度、${(d.MaxIntensity||"不明").replace("強","きょう").replace("弱","じゃく")}`);
         }
     } 
     
@@ -1767,21 +1667,31 @@ async function updateWolfxEEW(d){
     calculateEewOffset(d).then(async os=>{
         eewOffsets.set(id,os); if(window.lastKyoshinData)renderKyoshinCanvas(window.lastKyoshinData);
         if(eL&&eO){
-            let bd=L.latLngBounds([eL,eO],[eL,eO]), hwA=false;
+            let hwA=false;
             if(geojsonLayer&&prefData?.features){
                 const pms=prefData.features.map(async (f,idx)=>{
                     const pN=f.properties.name||f.properties.nam_ja||f.properties.code, pt=getPolygonPoint(f), fI=f.id||pN||`feat_${idx}`; let mSN=0, mSR="0", iFT=false;
                     for(let [eI,ew] of activeEEWs.entries()){if(ew.Forecast&&ew.Forecast.some(fc=>pN.includes(fc.Name)||fc.Name.includes(pN)))iFT=true; const wL=parseFloat(ew.Latitude), wO=parseFloat(ew.Longitude), wM=parseFloat(ew.Magunitude), wD=parseInt(ew.Depth), wMS=ew.MaxIntensity||"0"; if(wL&&wO){const cO=eewOffsets.get(eI)||0, rS=await calcPredictedIntensity(wM,wD,wL,wO,pt.lat,pt.lng,pN,cO,fI), lS=limitIntensity(rS,wMS), nm=fmt.intensityToNum(lS); if(nm>mSN){mSN=nm; mSR=lS;}}}
                     if(iFT&&mSN<4){mSR="4"; mSN=4;} eewPredictedStyles.set(fI,{shindo:mSR,isForecastTarget:iFT}); if(mSN>=1)hwA=true; return null;
-                }); await Promise.all(pms); geojsonLayer.eachLayer(l=>{const fI=l.feature.id||l.feature.properties.name||l.feature.properties.nam_ja||l.feature.properties.code; if(eewPredictedStyles.has(fI)&&fmt.intensityToNum(eewPredictedStyles.get(fI).shindo)>=1)bd.extend(l.getBounds());}); updateEewGeojsonStyles();
-            } if(activeEEWs.size===1){if(hwA&&userSettings.eewPrediction)lMap.flyToBounds(bd,{padding:[30,30],maxZoom:8,duration:1.5}); else lMap.flyTo([eL,eO],8,{duration:1.5});}
+                }); await Promise.all(pms); updateEewGeojsonStyles();
+            } if(activeEEWs.size===1){
+                let zoomLvl = 8;
+                const m = parseFloat(d.Magunitude);
+                if(!isNaN(m)){
+                    if(m >= 8.0) zoomLvl = 5;
+                    else if(m >= 7.0) zoomLvl = 5.5;
+                    else if(m >= 6.0) zoomLvl = 6;
+                    else if(m >= 5.0) zoomLvl = 7;
+                }
+                lMap.flyTo([eL,eO], zoomLvl, {duration:1.5});
+            }
         }
     });
-    if(d.isFinal&&!isDebugNankai){if(eewPollTimers.has(id))clearInterval(eewPollTimers.get(id)); let pc=0, pT=setInterval(()=>{loadQuakes(); pc++; if(!activeEEWs.has(id)||pc>15){clearInterval(pT); eewPollTimers.delete(id);}},2000); eewPollTimers.set(id,pT); if(eewTimeoutTimers.has(id))clearTimeout(eewTimeoutTimers.get(id)); const tT=setTimeout(()=>{if(activeEEWs.has(id)){clearEEWDisplay(id); if(activeEEWs.size===0)loadQuakes();}},180000); eewTimeoutTimers.set(id,tT);}
+    if(d.isFinal){if(eewPollTimers.has(id))clearInterval(eewPollTimers.get(id)); let pc=0, pT=setInterval(()=>{loadQuakes(); pc++; if(!activeEEWs.has(id)||pc>15){clearInterval(pT); eewPollTimers.delete(id);}},2000); eewPollTimers.set(id,pT); if(eewTimeoutTimers.has(id))clearTimeout(eewTimeoutTimers.get(id)); const tT=setTimeout(()=>{if(activeEEWs.has(id)){clearEEWDisplay(id); if(activeEEWs.size===0)loadQuakes();}},180000); eewTimeoutTimers.set(id,tT);}
 }
 
 let sites=[]; const loadSites=async()=>{try{const r=await fetch("https://weather-kyoshin.east.edge.storage-yahoo.jp/SiteList/sitelist.json"); const is=(await r.json()).items; const pl=v=>typeof v==="number"?v:Number(v.replace(/[NSEW]/g,m=>({N:"+",S:"-",E:"+",W:"-"}[m]))); sites=is.map(i=>({lat:pl(i[0]),lng:pl(i[1])})); tryPrecomputeSiteFeatures();}catch(e){}};
-let offsetSec=2; async function fetchKyoshin(){if(isDebugNankai)return generateMockKyoshin(); const n=new Date(); n.setSeconds(n.getSeconds()-offsetSec); const p=v=>String(v).padStart(2,'0'), u=`https://weather-kyoshin.east.edge.storage-yahoo.jp/RealTimeData/${n.getFullYear()}${p(n.getMonth()+1)}${p(n.getDate())}/${n.getFullYear()}${p(n.getMonth()+1)}${p(n.getDate())}${p(n.getHours())}${p(n.getMinutes())}${p(n.getSeconds())}.json`; try{const r=await fetch(u); if(!r.ok)throw new Error(); return await r.json();}catch{offsetSec++; return null;}}
+let offsetSec=2; async function fetchKyoshin(){const n=new Date(); n.setSeconds(n.getSeconds()-offsetSec); const p=v=>String(v).padStart(2,'0'), u=`https://weather-kyoshin.east.edge.storage-yahoo.jp/RealTimeData/${n.getFullYear()}${p(n.getMonth()+1)}${p(n.getDate())}/${n.getFullYear()}${p(n.getMonth()+1)}${p(n.getDate())}${p(n.getHours())}${p(n.getMinutes())}${p(n.getSeconds())}.json`; try{const r=await fetch(u); if(!r.ok)throw new Error(); return await r.json();}catch{offsetSec++; return null;}}
 
 let kyoshinHistory = new Map();
 let shakeEvents = [];
@@ -1839,7 +1749,7 @@ function renderKyoshinCanvas(d){
     if(!kyoshinCanvas.width||!sites.length)return; const ctx=kyoshinCanvas.getContext('2d'); ctx.clearRect(0,0,kyoshinCanvas.width,kyoshinCanvas.height); if(selectedHistoryQuake!==null)return;
     const it=d.realTimeData.intensity, zm=lMap.getZoom(), bR=Math.max(0.8,Math.pow(zm,2)*0.08); let aS=[], rtP=false, cT=Date.now();
     for(let i=0;i<sites.length;i++){
-        if(it[i]===undefined||it[i]===null)continue; let lv=0; if(isDebugNankai)lv=Math.max(0,it[i]); else{const ci=it[i].charCodeAt(0)-100; if(ci<0||ci>20)continue; lv=ci;}
+        if(it[i]===undefined||it[i]===null)continue; let lv=0; const ci=it[i].charCodeAt(0)-100; if(ci<0||ci>20)continue; lv=ci;
         if(userSettings.shakeDetect){
             let hs=kyoshinHistory.get(i); if(!hs){hs={levels:[]}; kyoshinHistory.set(i,hs);} hs.levels.push({t:cT,v:lv});
             while(hs.levels.length>0&&cT-hs.levels[0].t>10000)hs.levels.shift();
@@ -1886,13 +1796,13 @@ function updateCommentDisplay(qI){
     if(h==="")ar.innerHTML='<div class="noComment">受信待機中...</div>'; else{ar.innerHTML=h; ar.scrollTop=0; startAutoScroll("commentScrollArea");} applyAppearance();
 }
 
-let isInitialLoad=true, lastEqTime=null, lastTsunamiIssueTime=null;
+let isInitialLoad=true, lastEqTime=null, lastEqIssueTime=null, lastTsunamiIssueTime=null;
 async function loadQuakes(){
-    if(isDebugNankai)return; try{const rs=await fetch("https://api.p2pquake.net/v2/history?codes=551&codes=552&limit=50"); const fl=await rs.json(); if(!fl?.length)return; window.latestFullQuakeList=fl; const ls=fl.filter(x=>x.code===551), td=fl.find(x=>x.code===552); let lE=ls[0]; updateCommentDisplay(lE);
+    try{const rs=await fetch("https://api.p2pquake.net/v2/history?codes=551&codes=552&limit=50"); const fl=await rs.json(); if(!fl?.length)return; window.latestFullQuakeList=fl; const ls=fl.filter(x=>x.code===551), td=fl.find(x=>x.code===552); let lE=ls[0]; updateCommentDisplay(lE);
     if(lE?.issue?.type==="Destination"){const rp=ls.find(x=>x.issue?.type==="ScalePrompt"&&x.earthquake.time===lE.earthquake.time); if(rp){lE.points=rp.points; if(lE.earthquake.maxScale===-1)lE.earthquake.maxScale=rp.earthquake.maxScale;} else if(window.currentEarthquakeData?.time===lE.earthquake.time){lE.points=window.currentEarthquakePoints; if(lE.earthquake.maxScale===-1)lE.earthquake.maxScale=window.currentEarthquakeData.maxScale;}}
     let pU=false, pT=false, pTC=false, pTN=false;
-    if(lE&&lE.earthquake.time!==lastEqTime){
-        lastEqTime=lE.earthquake.time; if(!isInitialLoad){pU=true; const dm=Math.floor((new Date()-new Date(lE.earthquake.time.replace(/\//g,"-").replace(" ","T")))/60000), tP=dm>0?`先ほど、${dm}分前に発生した`:`先ほど発生した`, s=fmt.shindo(lE.earthquake.maxScale,lE.earthquake.hypocenter.depth), dS=lE.earthquake.hypocenter.depth===0?"ごく浅い":(lE.earthquake.hypocenter.depth===-1?"不明":lE.earthquake.hypocenter.depth+"キロメートル"), mg=lE.earthquake.hypocenter.magnitude, nN=lE.earthquake.hypocenter.name||"不明"; let sT="";
+    if(lE&&(lE.earthquake.time!==lastEqTime || lE.issue.time !== lastEqIssueTime)){
+        lastEqTime=lE.earthquake.time; lastEqIssueTime=lE.issue.time; if(!isInitialLoad){pU=true; const dm=Math.floor((new Date()-new Date(lE.earthquake.time.replace(/\//g,"-").replace(" ","T")))/60000), tP=dm>0?`先ほど、${dm}分前に発生した`:`先ほど発生した`, s=fmt.shindo(lE.earthquake.maxScale,lE.earthquake.hypocenter.depth), dS=lE.earthquake.hypocenter.depth===0?"ごく浅い":(lE.earthquake.hypocenter.depth===-1?"不明":lE.earthquake.hypocenter.depth+"キロメートル"), mg=lE.earthquake.hypocenter.magnitude, nN=lE.earthquake.hypocenter.name||"不明"; let sT="";
         if(lE.issue.type==="ScalePrompt"){sT=`震度速報です。最大震度${s.replace("強","きょう").replace("弱","じゃく")}の地震が発生しました。`; if(lE.points?.length)sT+=[...lE.points].sort((a,b)=>b.scale-a.scale).slice(0,3).map(p=>`${p.addr}で震度${fmt.shindo(p.scale).replace("強","きょう").replace("弱","じゃく")}`).join("、")+"などを観測しています。";} else if(lE.issue.type==="Destination"){sT=`先ほどの地震の震源位置が更新されました。震源地は、${nN}。マグニチュードは、${mg}。深さは、${dS}、です。`;} else{sT=`地震情報が更新されました。${tP}地震情報の詳細です。震源地は、${nN}。最大震度は、${s.replace("強","きょう").replace("弱","じゃく")}。マグニチュードは、${mg}で、深さは、${dS}、です。`; const dt=lE.earthquake.domesticTsunami; if(dt==="None")sT+=`この地震による津波の心配はありません。`; else if(dt==="Checking")sT+=`この地震による津波については、現在調査中です。`; else if(dt==="NonEffective")sT+=`若干の海面変動が予想されますが、被害の心配はありません。`; else if(dt==="Watch"||dt==="Warning"||dt==="MajorWarning")sT+=`津波警報、または注意報が発表されています。海岸から離れてください。`;} speakText(sT);
         let eT=lE.issue.type==="ScalePrompt"?"震度速報":(lE.issue.type==="Destination"?"震源情報":"地震情報"), eB=`最大震度: ${s}\n震源地: ${nN}\n規模: M${mg!==-1?mg.toFixed(1):'-.-'} 深さ: ${dS}\n発生時刻: ${lE.earthquake.time}`; if(lE.issue.type==="ScalePrompt"){eB=`最大震度: ${s}\n`; if(lE.points?.length)eB+=`観測地域: `+[...lE.points].sort((a,b)=>b.scale-a.scale).slice(0,5).map(p=>`${p.addr}: 震度${fmt.shindo(p.scale)}`).join(", ");} sendPushNotification(eT,{body:eB,icon:getPushIconDataURL(s,scaleColor(s),getContrastColor(scaleColor(s))),tag:"eq_"+lE.earthquake.time});}
     }
@@ -1925,8 +1835,8 @@ async function loadQuakes(){
 }
 
 function addLog(m){const p=document.getElementById("wsLogPanel"); if(!p)return; const l=document.createElement("div"); l.textContent=`[${new Date().toLocaleTimeString()}] ${m}`; p.prepend(l);}
-let isWolfxConnected=false; function connectWolfx(){const w=new WebSocket("wss://ws-api.wolfx.jp/jma_eew"); w.onmessage=e=>{if(isDebugNankai)return; const d=JSON.parse(e.data); if(d.type==="jma_eew"&&userSettings.eewSource==='wolfx')updateWolfxEEW(d);}; w.onopen=()=>{addLog("📡 Wolfx EEW Connected"); isWolfxConnected=true;}; w.onclose=()=>{addLog("📡 Wolfx EEW Disconnected"); isWolfxConnected=false; setTimeout(connectWolfx,5000);}; w.onerror=()=>{isWolfxConnected=false;};}
-function connectP2P(){const p=new WebSocket("wss://api.p2pquake.net/v2/ws"); p.onmessage=e=>{if(isDebugNankai)return; const d=JSON.parse(e.data); if(d.code===551||d.code===552){addLog(`P2P WS 受信: Code ${d.code}`); if(d.code===551){if(isEEWActive)clearEEWDisplay(); loadQuakes();} if(d.code===552)loadQuakes();}}; p.onopen=()=>addLog("📡 P2Pquake Connected"); p.onclose=()=>setTimeout(connectP2P,5000);}
+let isWolfxConnected=false; function connectWolfx(){const w=new WebSocket("wss://ws-api.wolfx.jp/jma_eew"); w.onmessage=e=>{const d=JSON.parse(e.data); if(d.type==="jma_eew"&&userSettings.eewSource==='wolfx')updateWolfxEEW(d);}; w.onopen=()=>{addLog("📡 Wolfx EEW Connected"); isWolfxConnected=true;}; w.onclose=()=>{addLog("📡 Wolfx EEW Disconnected"); isWolfxConnected=false; setTimeout(connectWolfx,5000);}; w.onerror=()=>{isWolfxConnected=false;};}
+function connectP2P(){const p=new WebSocket("wss://api.p2pquake.net/v2/ws"); p.onmessage=e=>{const d=JSON.parse(e.data); if(d.code===551||d.code===552){addLog(`P2P WS 受信: Code ${d.code}`); if(d.code===551){if(isEEWActive)clearEEWDisplay(); loadQuakes();} if(d.code===552)loadQuakes();}}; p.onopen=()=>addLog("📡 P2Pquake Connected"); p.onclose=()=>setTimeout(connectP2P,5000);}
 
 let axisToken=localStorage.getItem('axisToken')||"", axisWs=null, axisRetrySec=1000, axisRetryCount=0, axisHeartbeatTimer=null, axisRetryTimer=null;
 document.getElementById('axisTokenInput').value=axisToken; document.getElementById('btnAxisConnect').addEventListener('click',()=>{axisToken=document.getElementById('axisTokenInput').value; localStorage.setItem('axisToken',axisToken); connectAxis();});
