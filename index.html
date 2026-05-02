@@ -655,6 +655,17 @@ function updateSubMapGeojsonStyles() {
     let style = getLandDefaultStyle();
     if (animGeojsonLayer) animGeojsonLayer.setStyle(style);
     if (weatherGeojsonLayer) weatherGeojsonLayer.setStyle(style);
+    eewMiniMaps.forEach(obj => {
+        if (obj.geo) obj.geo.setStyle(style);
+        obj.map.getContainer().style.setProperty('background', userSettings.mapOceanColor, 'important');
+        if (userSettings.showMapTile) {
+            if (!obj.tile) {
+                obj.tile = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {subdomains: 'abcd', maxZoom: 10}).addTo(obj.map);
+            }
+        } else {
+            if (obj.tile) { obj.tile.remove(); obj.tile = null; }
+        }
+    });
 }
 
 ['fsLatest','fsDetail','fsTsunami','fsHistory','fsComment','fsXml','fsWeatherWarning'].forEach(k=>{ let sl=document.getElementById(k+'Slider'); let vl=document.getElementById(k+'Val'); if(sl&&vl){ sl.value=userSettings[k]; vl.innerText=userSettings[k]+"%"; sl.addEventListener('input', e=>{ userSettings[k]=parseInt(e.target.value); vl.innerText=userSettings[k]+"%"; saveSettings(); applyAppearance(); }); } });
@@ -676,6 +687,7 @@ document.getElementById('chkShowMapTile').addEventListener('change', e => {
         if(animMap) animBaseTileLayer.remove();
         if(weatherMap) weatherBaseTileLayer.remove();
     }
+    updateSubMapGeojsonStyles();
 });
 
 document.getElementById('mapOceanColorPicker').value = userSettings.mapOceanColor;
@@ -683,6 +695,7 @@ document.getElementById('mapOceanColorPicker').addEventListener('input', e => {
     userSettings.mapOceanColor = e.target.value;
     saveSettings();
     applyAppearance();
+    updateSubMapGeojsonStyles();
 });
 
 document.getElementById('mapLandColorPicker').value = userSettings.mapLandColor;
@@ -832,6 +845,28 @@ async function pollJmaXml(){
     }
     if(upd)renderXmlPanels();
 } setInterval(pollJmaXml, 30000);
+
+// 気象警報5分おきクリーンアップ・再評価 (XML高頻度フィード)
+async function forceRefreshWeatherWarningsFromXML() {
+    activeWeatherWarnings = {};
+    let weatherWarningUpdated = true;
+    try {
+        const feeds = ['https://www.data.jma.go.jp/developer/xml/feed/extra.xml', 'https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml'];
+        for(let url of feeds) {
+            let rs = await fetch(url);
+            let txt = await rs.text();
+            let xDoc = new DOMParser().parseFromString(txt,"application/xml");
+            let ents = Array.from(xDoc.querySelectorAll('entry'));
+            let warnEnts = ents.filter(e => e.querySelector('title')?.textContent.includes('気象特別警報・警報・注意報'));
+            let targetUrls = warnEnts.slice(0, 10).map(e => e.querySelector('link').getAttribute('href'));
+            for(let u of targetUrls.reverse()) {
+                await processXmlUrl(u, 'extra');
+            }
+        }
+    } catch(e) {}
+    if(isWeatherWarningMapMode) refreshMapDisplay();
+}
+setInterval(forceRefreshWeatherWarningsFromXML, 5 * 60 * 1000);
 
 function formatTimeXml(s){if(!s)return '-'; const d=new Date(s); if(isNaN(d.getTime()))return s; return `${d.getMonth()+1}月${d.getDate()}日 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;}
 function getHeightDescXml(p){if(!p)return '-'; const t=p.firstElementChild||p; return t.getAttribute('description')||t.textContent.trim();}
@@ -1212,123 +1247,118 @@ let isDebugNankai=false, debugStartTime=0; document.addEventListener('keydown', 
 function triggerNankaiDebug() {
     isDebugNankai = true;
     debugStartTime = Date.now();
-    addLog("【DEBUG】フルシミュレーション開始");
+    addLog("【DEBUG】フルシミュレーション開始 (全機能網羅)");
 
-    // 1. EEW 1 (Warn)
+    // 1. 巨大地震警戒 (Mega Quake)
     setTimeout(() => {
-        const oS = new Date(Date.now() - 5000).toISOString().replace("T", " ").substring(0, 19);
+        megaQuakeStatus.nankai = "南海トラフ地震臨時情報（巨大地震警戒）";
+        megaQuakeStatus.nankaiTime = Date.now();
+        updateMegaQuakeAlertPanel();
+        updateMegaQuakeTelop();
+        speakText("南海トラフ地震臨時情報、巨大地震警戒が発表されました。");
+    }, 1000);
+
+    // 2. 気象警報 (Weather Warning)
+    setTimeout(() => {
+        activeWeatherWarnings["東京都"] = { level: 3, kinds: ["大雨特別警報", "暴風警報"] };
+        activeWeatherWarnings["静岡県"] = { level: 2, kinds: ["大雨警報"] };
+        if(isWeatherWarningMapMode) refreshMapDisplay();
+    }, 3000);
+
+    // 3. 揺れ検知 (Shake Detect) - 仮想サイト
+    setTimeout(() => {
+        const mockSites = [
+            { lat: 34.7, lng: 137.7, lv: 15, time: Date.now() },
+            { lat: 34.8, lng: 137.8, lv: 12, time: Date.now() },
+            { lat: 34.9, lng: 137.9, lv: 10, time: Date.now() },
+            { lat: 35.0, lng: 138.0, lv: 8, time: Date.now() },
+            { lat: 35.1, lng: 138.1, lv: 7, time: Date.now() }
+        ];
+        handleShakeDetection(mockSites, { startTime: Date.now() });
+    }, 5000);
+
+    // 4. 同時地震 EEW1 (南海) & EEW2 (関東)
+    setTimeout(() => {
+        const oS1 = new Date(Date.now() - 5000).toISOString().replace("T", " ").substring(0, 19);
         updateWolfxEEW({
-            "type": "jma_eew", "EventID": "DEBUG_EEW_1", "Title": "緊急地震速報（警報）",
+            "type": "jma_eew", "EventID": "DEBUG_EEW_NANKAI", "Title": "緊急地震速報（警報）",
+            "Serial": "1", "isFinal": false, "isCancel": false, "isWarn": true,
+            "isTraining": true, "isAssumption": false, "isSea": true,
+            "AnnouncedTime": new Date().toISOString().replace("T", " ").substring(0, 19),
+            "OriginTime": oS1, "Hypocenter": "遠州灘", "Latitude": 34.5, "Longitude": 137.5,
+            "Magunitude": "8.5", "Depth": "10", "MaxIntensity": "7",
+            "WarnArea": { "Chiiki": "静岡、愛知、三重、和歌山、高知" }, "OriginalText": "テストEEW第1報(南海)"
+        });
+
+        const oS2 = new Date(Date.now() - 2000).toISOString().replace("T", " ").substring(0, 19);
+        updateWolfxEEW({
+            "type": "jma_eew", "EventID": "DEBUG_EEW_KANTO", "Title": "緊急地震速報（警報）",
             "Serial": "1", "isFinal": false, "isCancel": false, "isWarn": true,
             "isTraining": true, "isAssumption": false, "isSea": false,
             "AnnouncedTime": new Date().toISOString().replace("T", " ").substring(0, 19),
-            "OriginTime": oS, "Hypocenter": "東京湾", "Latitude": 35.5, "Longitude": 139.8,
-            "Magunitude": "7.3", "Depth": "30", "MaxIntensity": "6弱",
-            "WarnArea": { "Chiiki": "東京、神奈川、千葉、埼玉" }, "OriginalText": "テストEEW第1報"
+            "OriginTime": oS2, "Hypocenter": "東京湾", "Latitude": 35.5, "Longitude": 139.8,
+            "Magunitude": "7.3", "Depth": "30", "MaxIntensity": "6強",
+            "WarnArea": { "Chiiki": "東京、神奈川、千葉" }, "OriginalText": "テストEEW第1報(関東)"
         });
-    }, 1000);
+    }, 8000);
 
-    // 2. EEW 2 (Cancel later)
+    // 5. EEW 更新 (P波・S波が広がるのを確認するため時間を置く)
     setTimeout(() => {
-        const oS2 = new Date(Date.now() - 3000).toISOString().replace("T", " ").substring(0, 19);
+        const oS1 = new Date(Date.now() - 15000).toISOString().replace("T", " ").substring(0, 19);
         updateWolfxEEW({
-            "type": "jma_eew", "EventID": "DEBUG_EEW_2", "Title": "緊急地震速報（予報）",
-            "Serial": "1", "isFinal": false, "isCancel": false, "isWarn": false,
+            "type": "jma_eew", "EventID": "DEBUG_EEW_NANKAI", "Title": "緊急地震速報（警報）",
+            "Serial": "2", "isFinal": false, "isCancel": false, "isWarn": true,
             "isTraining": true, "isAssumption": false, "isSea": true,
             "AnnouncedTime": new Date().toISOString().replace("T", " ").substring(0, 19),
-            "OriginTime": oS2, "Hypocenter": "大阪湾", "Latitude": 34.5, "Longitude": 135.2,
-            "Magunitude": "4.5", "Depth": "10", "MaxIntensity": "3",
-            "WarnArea": { "Chiiki": "大阪" }, "OriginalText": "テストEEW第1報(大阪)"
+            "OriginTime": oS1, "Hypocenter": "遠州灘", "Latitude": 34.5, "Longitude": 137.5,
+            "Magunitude": "8.8", "Depth": "10", "MaxIntensity": "7",
+            "WarnArea": { "Chiiki": "西日本広域" }, "OriginalText": "テストEEW第2報(南海)"
         });
-    }, 3000);
-
-    // 3. EEW 1 Update
-    setTimeout(() => {
-        const oS = new Date(Date.now() - 10000).toISOString().replace("T", " ").substring(0, 19);
-        updateWolfxEEW({
-            "type": "jma_eew", "EventID": "DEBUG_EEW_1", "Title": "緊急地震速報（警報）",
-            "Serial": "2", "isFinal": false, "isCancel": false, "isWarn": true,
-            "isTraining": true, "isAssumption": false, "isSea": false,
-            "AnnouncedTime": new Date().toISOString().replace("T", " ").substring(0, 19),
-            "OriginTime": oS, "Hypocenter": "東京湾", "Latitude": 35.5, "Longitude": 139.8,
-            "Magunitude": "7.5", "Depth": "30", "MaxIntensity": "6強",
-            "WarnArea": { "Chiiki": "東京、神奈川、千葉、埼玉、茨城" }, "OriginalText": "テストEEW第2報"
-        });
-    }, 6000);
-
-    // 4. EEW 2 Cancel
-    setTimeout(() => {
-        updateWolfxEEW({
-            "type": "jma_eew", "EventID": "DEBUG_EEW_2", "Title": "緊急地震速報（取消）",
-            "Serial": "2", "isFinal": false, "isCancel": true, "isWarn": false,
-            "isTraining": true, "isAssumption": false,
-            "AnnouncedTime": new Date().toISOString().replace("T", " ").substring(0, 19)
-        });
-    }, 9000);
-
-    // 5. EEW 1 Final
-    setTimeout(() => {
-        const oS = new Date(Date.now() - 15000).toISOString().replace("T", " ").substring(0, 19);
-        updateWolfxEEW({
-            "type": "jma_eew", "EventID": "DEBUG_EEW_1", "Title": "緊急地震速報（警報）",
-            "Serial": "3", "isFinal": true, "isCancel": false, "isWarn": true,
-            "isTraining": true, "isAssumption": false, "isSea": false,
-            "AnnouncedTime": new Date().toISOString().replace("T", " ").substring(0, 19),
-            "OriginTime": oS, "Hypocenter": "東京湾", "Latitude": 35.5, "Longitude": 139.8,
-            "Magunitude": "7.5", "Depth": "30", "MaxIntensity": "6強",
-            "WarnArea": { "Chiiki": "東京、神奈川、千葉、埼玉、茨城" }, "OriginalText": "テストEEW最終報"
-        });
-    }, 12000);
-
-    // 6. Scale Prompt (震度速報)
-    setTimeout(() => {
-        const mE = {
-            code: 551, issue: { type: "ScalePrompt", time: new Date().toISOString().replace("T", " ").substring(0, 19) },
-            earthquake: { time: new Date().toISOString().replace("T", " ").substring(0, 19), hypocenter: { name: "", latitude: -200, longitude: -200, depth: -1, magnitude: -1 }, maxScale: 60, domesticTsunami: "Checking" },
-            points: [{ pref: "東京都", addr: "東京23区", scale: 60 }], comments: { freeFormComment: "テスト震度速報" }
-        };
-        window.latestFullQuakeList = [mE];
-        loadQuakes();
     }, 18000);
 
-    // 7. Destination (震源情報)
-    setTimeout(() => {
-        const mE = {
-            code: 551, issue: { type: "Destination", time: new Date().toISOString().replace("T", " ").substring(0, 19) },
-            earthquake: { time: window.latestFullQuakeList[0].earthquake.time, hypocenter: { name: "東京湾", latitude: 35.5, longitude: 139.8, depth: 30, magnitude: 7.5 }, maxScale: 60, domesticTsunami: "Warning" },
-            points: [{ pref: "東京都", addr: "東京23区", scale: 60 }], comments: { freeFormComment: "テスト震源情報" }
-        };
-        window.latestFullQuakeList = [mE];
-        loadQuakes();
-    }, 24000);
-
-    // 8. Tsunami Warning (大津波、津波、注意報、予報)
+    // 6. 大津波警報 (Tsunami)
     setTimeout(() => {
         const td = {
             code: 552, cancelled: false, issue: { time: new Date().toISOString().replace("T", " ").substring(0, 19) },
             areas: [
-                { name: "東京湾内", grade: "MajorWarning", maxHeight: { description: "10m超" } },
-                { name: "千葉県内房", grade: "Warning", maxHeight: { description: "3m" } },
-                { name: "神奈川県", grade: "Watch", maxHeight: { description: "1m" } },
-                { name: "静岡県", grade: "SlightChange", maxHeight: { description: "0.2m未満" } }
+                { name: "静岡県", grade: "MajorWarning", maxHeight: { description: "10m超" }, immediate: true },
+                { name: "愛知県外海", grade: "MajorWarning", maxHeight: { description: "10m超" }, immediate: true },
+                { name: "三重県南部", grade: "Warning", maxHeight: { description: "3m" } },
+                { name: "和歌山県", grade: "Watch", maxHeight: { description: "1m" } }
             ]
         };
         currentTsunamiData = td;
-        updateTsunamiDisplay(td, window.latestFullQuakeList[0].earthquake);
+        updateTsunamiDisplay(td, window.latestFullQuakeList?.[0]?.earthquake);
         seTsunami.currentTime = 0; seTsunami.play().catch(e=>{});
         speakText("大津波警報、津波警報、津波注意報が発表されました。海岸から離れてください。");
+    }, 25000);
+
+    // 7. 長周期地震動 (LPGM)
+    setTimeout(() => {
+        updateLPGMDisplay(8.8, 10);
     }, 30000);
-    
-    // 9. Final EQ Info (地震情報)
+
+    // 8. 震度速報
     setTimeout(() => {
         const mE = {
-            code: 551, issue: { type: "DetailScale", time: new Date().toISOString().replace("T", " ").substring(0, 19) },
-            earthquake: { time: window.latestFullQuakeList[0].earthquake.time, hypocenter: { name: "東京湾", latitude: 35.5, longitude: 139.8, depth: 30, magnitude: 7.5 }, maxScale: 60, domesticTsunami: "MajorWarning" },
-            points: [{ pref: "東京都", addr: "東京23区", scale: 60 }, { pref: "神奈川県", addr: "横浜", scale: 50 }], comments: { freeFormComment: "テスト地震情報" }
+            code: 551, issue: { type: "ScalePrompt", time: new Date().toISOString().replace("T", " ").substring(0, 19) },
+            earthquake: { time: new Date().toISOString().replace("T", " ").substring(0, 19), hypocenter: { name: "", latitude: -200, longitude: -200, depth: -1, magnitude: -1 }, maxScale: 70, domesticTsunami: "Checking" },
+            points: [{ pref: "静岡県", addr: "静岡県西部", scale: 70 }, { pref: "愛知県", addr: "愛知県東部", scale: 60 }], comments: { freeFormComment: "テスト震度速報 (南海)" }
         };
         window.latestFullQuakeList = [mE];
         loadQuakes();
-    }, 36000);
+    }, 35000);
+    
+    // 9. 地震情報 (詳細)
+    setTimeout(() => {
+        const mE = {
+            code: 551, issue: { type: "DetailScale", time: new Date().toISOString().replace("T", " ").substring(0, 19) },
+            earthquake: { time: window.latestFullQuakeList[0].earthquake.time, hypocenter: { name: "遠州灘", latitude: 34.5, longitude: 137.5, depth: 10, magnitude: 8.8 }, maxScale: 70, domesticTsunami: "MajorWarning", maxLpgmInt: 4 },
+            points: [{ pref: "静岡県", addr: "浜松", scale: 70, lpgmInt: 4 }, { pref: "愛知県", addr: "豊橋", scale: 60, lpgmInt: 4 }], comments: { freeFormComment: "テスト地震情報 (南海)" }
+        };
+        window.latestFullQuakeList = [mE];
+        loadQuakes();
+    }, 45000);
 }
 
 function generateMockKyoshin(){const it=new Array(sites.length).fill(0), el=(Date.now()-debugStartTime+3000)/1000; for(let i=0;i<sites.length;i++){let d=getDistance(35.5,139.8,sites[i].lat,sites[i].lng); if(d<el*4.9){let lv=180-(d*0.15); it[i]=Math.max(0,Math.min(190,Math.floor(lv)));}else if(d<el*9.1)it[i]=110;} return {realTimeData:{intensity:it}};}
@@ -1595,21 +1625,33 @@ function renderEewCards() {
     `;
 
     setTimeout(() => {
-        const eL = parseFloat(d.InitialLatitude || d.Latitude);
-        const eO = parseFloat(d.InitialLongitude || d.Longitude);
+        const eL = parseFloat(d.InitialLatitude);
+        const eO = parseFloat(d.InitialLongitude);
         if (!eewMiniMaps.has(id)) {
             let m = L.map(mapId, {
                 zoomControl: false, attributionControl: false, 
                 dragging: false, touchZoom: false, scrollWheelZoom: false, doubleClickZoom: false
             }).setView([eL || 35, eO || 135], 6);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {subdomains: 'abcd', maxZoom: 10}).addTo(m);
+            
+            m.getContainer().style.setProperty('background', userSettings.mapOceanColor, 'important');
+            
+            let tileLayer = null;
+            if (userSettings.showMapTile !== false) {
+                tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {subdomains: 'abcd', maxZoom: 10}).addTo(m);
+            }
+            
+            let geoLayer = null;
+            if (prefData) {
+                geoLayer = L.geoJSON(prefData, { style: () => getLandDefaultStyle(), interactive: false }).addTo(m);
+            }
+
             let mk = null;
             if(eL && eO) {
                 mk = L.marker([eL, eO], {
                     icon: L.divIcon({className: 'epicenter-icon', html: '×', iconSize: [30, 30], iconAnchor: [15, 15]})
                 }).addTo(m);
             }
-            eewMiniMaps.set(id, { map: m, marker: mk });
+            eewMiniMaps.set(id, { map: m, marker: mk, tile: tileLayer, geo: geoLayer });
             setTimeout(() => m.invalidateSize(), 100);
         } else {
             let obj = eewMiniMaps.get(id);
@@ -1617,9 +1659,7 @@ function renderEewCards() {
             let mk = obj.marker;
             if(eL && eO) {
                 m.setView([eL, eO], 6);
-                if (mk) {
-                    mk.setLatLng([eL, eO]);
-                } else {
+                if (!mk) {
                     mk = L.marker([eL, eO], {
                         icon: L.divIcon({className: 'epicenter-icon', html: '×', iconSize: [30, 30], iconAnchor: [15, 15]})
                     }).addTo(m);
@@ -2126,72 +2166,4 @@ function initWeatherMap() {
     hrpnsLayer = L.tileLayer('', layerOptions).addTo(weatherMap);
     thnsLayer = L.tileLayer('', layerOptions).addTo(weatherMap);
 
-    weatherMap.on('click', () => {
-        toggleMapSwap();
-    });
-
-    fetchJmaWeatherData();
-    setInterval(fetchJmaWeatherData, 2 * 60 * 1000);
-    setInterval(toggleWeatherMode, 60 * 1000);
-}
-
-document.getElementById('weatherMapPanel').addEventListener('click', (e) => {
-    if(e.target.id === 'weatherMapPanel' || e.target.closest('.axisHeader')) {
-        toggleMapSwap();
-    }
-});
-
-async function fetchJmaWeatherData() {
-    try {
-        const response = await fetch('https://www.jma.go.jp/bosai/jmatile/data/nowc/targetTimes_N1.json');
-        const targetTimes = await response.json();
-        
-        if (targetTimes && targetTimes.length > 0) {
-            const basetime = targetTimes[0].basetime;
-            latestWeatherValidtime = targetTimes[0].validtime;
-
-            hrpnsLayer.setUrl(`https://www.jma.go.jp/bosai/jmatile/data/nowc/${basetime}/none/${latestWeatherValidtime}/surf/hrpns/{z}/{x}/{y}.png`);
-            thnsLayer.setUrl(`https://www.jma.go.jp/bosai/jmatile/data/nowc/${basetime}/none/${latestWeatherValidtime}/surf/thns/{z}/{x}/{y}.png`);
-            
-            updateWeatherDisplay();
-        }
-    } catch (error) {
-        console.error('気象データ取得失敗:', error);
-    }
-}
-
-function toggleWeatherMode() {
-    currentWeathMode = (currentWeathMode === 'hrpns') ? 'thns' : 'hrpns';
-    updateWeatherDisplay();
-}
-
-function updateWeatherDisplay() {
-    if (!latestWeatherValidtime) return;
-    const titleEl = document.getElementById('weatherMapTitle');
-    const panelEl = document.getElementById('weatherMapPanel');
-    
-    if (currentWeathMode === 'hrpns') {
-        hrpnsLayer.setOpacity(0.7);
-        thnsLayer.setOpacity(0);
-        if(titleEl) {
-            titleEl.innerText = "気象レーダー (RAIN)";
-            titleEl.parentNode.style.color = "#00BFFF";
-        }
-        if(panelEl) panelEl.style.borderTopColor = "#0055ff";
-    } else {
-        hrpnsLayer.setOpacity(0);
-        thnsLayer.setOpacity(0.7);
-        if(titleEl) {
-            titleEl.innerText = "気象レーダー (THUNDER)";
-            titleEl.parentNode.style.color = "#FFD700";
-        }
-        if(panelEl) panelEl.style.borderTopColor = "#d68900";
-    }
-}
-
-async function startApp(){try{await checkSystemUpdate(); applyAppearance(); updateStartupStatus("観測点データ読み込み中..."); await loadSites(); updateStartupStatus("地図データ読み込み中..."); await initLeaflet(); updateStartupStatus("地震情報取得中..."); await loadQuakes(); pollJmaXml(); connectP2P(); connectWolfx(); connectAxis(); updateStartupStatus("リアルタイムデータ取得中..."); const d=await fetchKyoshin(); if(d)drawKyoshin(d); setInterval(async()=>{const r=await fetchKyoshin(); if(r)drawKyoshin(r);},1000); initAnnualAnimation(); initWeatherMap(); showStartupReady();}catch(e){updateStartupStatus("初期化エラー: "+e.message); showStartupReady();}}
-
-document.addEventListener("DOMContentLoaded", ()=>{startApp(); document.getElementById("btnStart").addEventListener("click", ()=>{document.getElementById("startupScreen").style.display="none"; initAudio();}); document.getElementById("btnSiyou").addEventListener("click", ()=>{document.getElementById("siyouIframe").src="siyou.html"; document.getElementById("siyouModal").style.display="flex";}); document.getElementById("btnCloseSiyou").addEventListener("click", ()=>{document.getElementById("siyouModal").style.display="none"; document.getElementById("siyouIframe").src="";});});
-</script>
-</body>
-</html>
+    weatherMap.on('click', () => { toggleMapSwap(); }); fetchJmaWeatherData(); setInterval(fetchJmaWeatherData, 2 * 60 * 1000); setInterval(toggleWeatherMode, 60 * 1000); } document.getElementById('weatherMapPanel').addEventListener('click', (e) => { if(e.target.id === 'weatherMapPanel' || e.target.closest('.axisHeader')) { toggleMapSwap(); } }); async function fetchJmaWeatherData() { try { const response = await fetch('https://www.jma.go.jp/bosai/jmatile/data/nowc/targetTimes_N1.json'); const targetTimes = await response.json(); if (targetTimes && targetTimes.length > 0) { const basetime = targetTimes[0].basetime; latestWeatherValidtime = targetTimes[0].validtime; hrpnsLayer.setUrl(`https://www.jma.go.jp/bosai/jmatile/data/nowc/${basetime}/none/${latestWeatherValidtime}/surf/hrpns/{z}/{x}/{y}.png`); thnsLayer.setUrl(`https://www.jma.go.jp/bosai/jmatile/data/nowc/${basetime}/none/${latestWeatherValidtime}/surf/thns/{z}/{x}/{y}.png`); updateWeatherDisplay(); } } catch (error) { console.error('気象データ取得失敗:', error); } } function toggleWeatherMode() { currentWeathMode = (currentWeathMode === 'hrpns') ? 'thns' : 'hrpns'; updateWeatherDisplay(); } function updateWeatherDisplay() { if (!latestWeatherValidtime) return; const titleEl = document.getElementById('weatherMapTitle'); const panelEl = document.getElementById('weatherMapPanel'); if (currentWeathMode === 'hrpns') { hrpnsLayer.setOpacity(0.7); thnsLayer.setOpacity(0); if(titleEl) { titleEl.innerText = "気象レーダー (RAIN)"; titleEl.parentNode.style.color = "#00BFFF"; } if(panelEl) panelEl.style.borderTopColor = "#0055ff"; } else { hrpnsLayer.setOpacity(0); thnsLayer.setOpacity(0.7); if(titleEl) { titleEl.innerText = "気象レーダー (THUNDER)"; titleEl.parentNode.style.color = "#FFD700"; } if(panelEl) panelEl.style.borderTopColor = "#d68900"; } } async function startApp(){try{await checkSystemUpdate(); applyAppearance(); updateStartupStatus("観測点データ読み込み中..."); await loadSites(); updateStartupStatus("地図データ読み込み中..."); await initLeaflet(); updateStartupStatus("地震情報取得中..."); await loadQuakes(); pollJmaXml(); connectP2P(); connectWolfx(); connectAxis(); updateStartupStatus("リアルタイムデータ取得中..."); const d=await fetchKyoshin(); if(d)drawKyoshin(d); setInterval(async()=>{const r=await fetchKyoshin(); if(r)drawKyoshin(r);},1000); initAnnualAnimation(); initWeatherMap(); showStartupReady();}catch(e){updateStartupStatus("初期化エラー: "+e.message); showStartupReady();}} document.addEventListener("DOMContentLoaded", ()=>{startApp(); document.getElementById("btnStart").addEventListener("click", ()=>{document.getElementById("startupScreen").style.display="none"; initAudio();}); document.getElementById("btnSiyou").addEventListener("click", ()=>{document.getElementById("siyouIframe").src="siyou.html"; document.getElementById("siyouModal").style.display="flex";}); document.getElementById("btnCloseSiyou").addEventListener("click", ()=>{document.getElementById("siyouModal").style.display="none"; document.getElementById("siyouIframe").src="";});});</script> </body> </html>
