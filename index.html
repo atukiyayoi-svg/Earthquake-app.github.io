@@ -312,7 +312,7 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
         <div id="startupStatus">システム初期化中...</div>
         <div id="startupReady" style="display: none;">
             <div class="app-title">EPICA</div>
-            <div class="app-version">V<span id="startup-version">4.4.1</span> R.ver</div>
+            <div class="app-version">V<span id="startup-version">4.4.1</span> R.ver (Optimized)</div>
             <div class="btn-group">
                 <button id="btnStart" class="startup-btn">開始</button>
                 <button id="btnSiyou" class="startup-btn" style="background:#222; border-color:#555;">仕様確認</button>
@@ -1316,6 +1316,7 @@ let animGeojsonLayer = null, weatherGeojsonLayer = null;
 
 lMap.createPane('tsunamiPane'); lMap.getPane('tsunamiPane').style.zIndex=410; lMap.getPane('tsunamiPane').style.pointerEvents='none'; lMap.createPane('kyoshinPane'); lMap.getPane('kyoshinPane').style.zIndex=450; lMap.getPane('kyoshinPane').style.pointerEvents='none'; lMap.createPane('wavePane'); lMap.getPane('wavePane').style.zIndex=460; lMap.getPane('wavePane').style.pointerEvents='none'; lMap.createPane('obsPane'); lMap.getPane('obsPane').style.zIndex=600; lMap.getPane('obsPane').style.pointerEvents='none'; lMap.createPane('epicenterPane'); lMap.getPane('epicenterPane').style.zIndex=650; lMap.getPane('epicenterPane').style.pointerEvents='none';
 
+// Canvas軽量化対応
 const obsCanvas=document.createElement('canvas'); obsCanvas.style.pointerEvents='none'; obsCanvas.className='leaflet-zoom-animated'; 
 const ObsLayer=L.Layer.extend({
     onAdd:function(m){this._m=m;this._c=obsCanvas;m.getPane('obsPane').appendChild(this._c);m.on('moveend',this._rs,this);m.on('zoom',this._rd,this);this._rs();},
@@ -1330,11 +1331,25 @@ function renderObsCanvas(){
     const ctx=obsCanvas.getContext('2d'); ctx.clearRect(0,0,obsCanvas.width,obsCanvas.height);
     if(!currentObsPointsToDraw||currentObsPointsToDraw.length===0)return;
     currentObsPointsToDraw.sort((a,b)=>a.scale-b.scale);
+
+    const zm = lMap.getZoom();
+    const scaleFactor = lMap.getZoomScale(zm, 0);
+    const pixelOrigin = lMap.getPixelOrigin();
+    const cW = obsCanvas.width, cH = obsCanvas.height;
+
     for(let pt of currentObsPointsToDraw){
         let sc=pt.scale; let imgKey=(sc==45?"50":sc==50?"55":sc==55?"60":sc==60?"65":sc==70?"7":sc==46?"_":String(sc/10));
         let img=obsImages[imgKey]; if(!img)continue;
-        let cPt=lMap.latLngToContainerPoint([pt.lat,pt.lon]); let s=pt.isAreaPt?20:16;
-        ctx.drawImage(img,cPt.x-s/2,cPt.y-s/2,s,s);
+        
+        if(!pt.projected) pt.projected = lMap.project(L.latLng(pt.lat, pt.lon), 0);
+        const p = pt.projected;
+        const x = p.x * scaleFactor - pixelOrigin.x;
+        const y = p.y * scaleFactor - pixelOrigin.y;
+        
+        let s=pt.isAreaPt?20:16;
+        if(x < -s/2 || x > cW + s/2 || y < -s/2 || y > cH + s/2) continue;
+
+        ctx.drawImage(img, x-s/2, y-s/2, s, s);
     }
 }
 
@@ -1766,12 +1781,28 @@ async function updateWolfxEEW(d){
     if(d.isFinal){if(eewPollTimers.has(id))clearInterval(eewPollTimers.get(id)); let pc=0, pT=setInterval(()=>{loadQuakes(); pc++; if(!activeEEWs.has(id)||pc>15){clearInterval(pT); eewPollTimers.delete(id);}},2000); eewPollTimers.set(id,pT); if(eewTimeoutTimers.has(id))clearTimeout(eewTimeoutTimers.get(id)); const tT=setTimeout(()=>{if(activeEEWs.has(id)){clearEEWDisplay(id); if(activeEEWs.size===0)loadQuakes();}},180000); eewTimeoutTimers.set(id,tT);}
 }
 
-let sites=[]; const loadSites=async()=>{try{const r=await fetch("https://weather-kyoshin.east.edge.storage-yahoo.jp/SiteList/sitelist.json"); const is=(await r.json()).items; const pl=v=>typeof v==="number"?v:Number(v.replace(/[NSEW]/g,m=>({N:"+",S:"-",E:"+",W:"-"}[m]))); sites=is.map(i=>({lat:pl(i[0]),lng:pl(i[1])})); tryPrecomputeSiteFeatures();}catch(e){}};
+let sites=[]; 
+const loadSites=async()=>{
+    try{
+        const r=await fetch("https://weather-kyoshin.east.edge.storage-yahoo.jp/SiteList/sitelist.json"); 
+        const is=(await r.json()).items; 
+        const pl=v=>typeof v==="number"?v:Number(v.replace(/[NSEW]/g,m=>({N:"+",S:"-",E:"+",W:"-"}[m]))); 
+        sites=is.map(i=>({lat:pl(i[0]),lng:pl(i[1])})); 
+        tryPrecomputeSiteFeatures();
+    }catch(e){}
+};
+
 let offsetSec=2; async function fetchKyoshin(){const n=new Date(); n.setSeconds(n.getSeconds()-offsetSec); const p=v=>String(v).padStart(2,'0'), u=`https://weather-kyoshin.east.edge.storage-yahoo.jp/RealTimeData/${n.getFullYear()}${p(n.getMonth()+1)}${p(n.getDate())}/${n.getFullYear()}${p(n.getMonth()+1)}${p(n.getDate())}${p(n.getHours())}${p(n.getMinutes())}${p(n.getSeconds())}.json`; try{const r=await fetch(u); if(!r.ok)throw new Error(); return await r.json();}catch{offsetSec++; return null;}}
 
 let kyoshinHistory = new Map();
 let shakeEvents = [];
-window.lastKyoshinData=null; function drawKyoshin(d){if(!d?.realTimeData)return; window.lastKyoshinData=d; renderKyoshinCanvas(d);}
+window.lastKyoshinData=null; 
+
+function drawKyoshin(d){
+    if(!d?.realTimeData)return; 
+    window.lastKyoshinData=d; 
+    renderKyoshinCanvas(d);
+}
 
 let isShakeDetectActive=false, preShakeDetectMode=false, shakeDetectCooldown=null;
 function cancelShakeDetectImmediate(){
@@ -1821,9 +1852,25 @@ function handleShakeDetection(validSites, evObj){
     if(ii)sendPushNotification(`揺れ検知情報`,{body:`時刻: ${new Date().toLocaleTimeString()}\n地域: ${Array.from(dR).join("、 ")}\n計測震度目安: ${((cM-6)*0.5).toFixed(1)}以上`,icon:getPushIconDataURL("検知","#00FF00","#000"),tag:"shake_detect"});
 }
 
+// Canvas 軽量化描画
 function renderKyoshinCanvas(d){
-    if(!kyoshinCanvas.width||!sites.length)return; const ctx=kyoshinCanvas.getContext('2d'); ctx.clearRect(0,0,kyoshinCanvas.width,kyoshinCanvas.height); if(selectedHistoryQuake!==null)return;
-    const it=d.realTimeData.intensity, zm=lMap.getZoom(), bR=Math.max(0.8,Math.pow(zm,2)*0.08); let aS=[], rtP=false, cT=Date.now();
+    if(!kyoshinCanvas.width||!sites.length)return; 
+    const ctx=kyoshinCanvas.getContext('2d'); 
+    ctx.clearRect(0,0,kyoshinCanvas.width,kyoshinCanvas.height); 
+    if(selectedHistoryQuake!==null)return;
+    
+    const it=d.realTimeData.intensity;
+    const zm=lMap.getZoom(); 
+    const bR=Math.max(0.8,Math.pow(zm,2)*0.08); 
+    let aS=[], rtP=false, cT=Date.now();
+    
+    const scaleFactor = lMap.getZoomScale(zm, 0);
+    const pixelOrigin = lMap.getPixelOrigin();
+    const cW = kyoshinCanvas.width;
+    const cH = kyoshinCanvas.height;
+    
+    const batches = {};
+
     for(let i=0;i<sites.length;i++){
         if(it[i]===undefined||it[i]===null)continue; let lv=0; const ci=it[i].charCodeAt(0)-100; if(ci<0||ci>20)continue; lv=ci;
         if(userSettings.shakeDetect){
@@ -1833,10 +1880,40 @@ function renderKyoshinCanvas(d){
         }
         if(isEEWActive&&userSettings.eewRealtimePaint){let fi=siteToFeatureId[i]; if(fi){let cM=eewRealtimeMaxLv.get(fi)||-999; if(lv>cM){eewRealtimeMaxLv.set(fi,lv); rtP=true;}}}
         const cS=KYOSHIN_COLORS[Math.floor(Math.min(Math.max(0,lv),KYOSHIN_COLORS.length-1))||0]; if(!cS)continue;
-        let al=1.0; if(!isEEWActive){if(isRealtimeOnlyMode)al=1.0; else{al=Math.max(0.05,Math.min(1.0,lv/8)); if(al<0.1)continue;}}
-        const pt=lMap.latLngToContainerPoint([sites[i].lat,sites[i].lng]); if(pt.x<-bR||pt.x>kyoshinCanvas.width+bR||pt.y<-bR||pt.y>kyoshinCanvas.height+bR)continue;
-        ctx.beginPath(); ctx.arc(pt.x,pt.y,bR,0,Math.PI*2); ctx.fillStyle=hexToRgba(cS,al); ctx.fill();
+        
+        let al=1.0; 
+        if(!isEEWActive){
+            if(isRealtimeOnlyMode)al=1.0; 
+            else{
+                al=Math.max(0.05,Math.min(1.0,lv/8)); 
+                if(al<0.1)continue;
+            }
+        }
+        
+        if(!sites[i].projected) sites[i].projected = lMap.project(L.latLng(sites[i].lat, sites[i].lng), 0);
+        const p = sites[i].projected;
+        const x = p.x * scaleFactor - pixelOrigin.x;
+        const y = p.y * scaleFactor - pixelOrigin.y;
+        
+        if(x < -bR || x > cW + bR || y < -bR || y > cH + bR) continue;
+        
+        const styleStr = hexToRgba(cS, al);
+        if(!batches[styleStr]) batches[styleStr] = [];
+        batches[styleStr].push({x, y});
     }
+    
+    // バッチ描画
+    for(const style in batches){
+        ctx.beginPath();
+        ctx.fillStyle = style;
+        const pts = batches[style];
+        for(let i=0; i<pts.length; i++){
+            ctx.moveTo(pts[i].x + bR, pts[i].y);
+            ctx.arc(pts[i].x, pts[i].y, bR, 0, Math.PI*2);
+        }
+        ctx.fill();
+    }
+
     if(userSettings.shakeDetect){
         aS.forEach(trg=>{let asg=false; for(let ev of shakeEvents){let mD=Infinity; for(let st of ev.sites){let ds=getDistance(trg.lat,trg.lng,st.lat,st.lng); if(ds<mD)mD=ds;} if(mD<50){let ex=ev.sites.find(s=>s.idx===trg.idx); if(!ex)ev.sites.push(trg); else ex.lv=Math.max(ex.lv,trg.lv); ev.lastUpdate=cT; asg=true; break;}} if(!asg)shakeEvents.push({id:cT+"_"+trg.idx,sites:[trg],startTime:cT,lastUpdate:cT,maxLv:trg.lv});});
         shakeEvents=shakeEvents.filter(ev=>cT-ev.lastUpdate<15000);
