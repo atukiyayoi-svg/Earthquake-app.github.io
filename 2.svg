@@ -1,0 +1,46 @@
+<svg width="600" height="140" viewBox="0 0 600 140" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#cccccc" />
+    </linearGradient>
+    
+    <linearGradient id="waveGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00BFFF" stop-opacity="0" />
+      <stop offset="15%" stop-color="#00BFFF" />
+      <stop offset="35%" stop-color="#FFFF00" />
+      <stop offset="50%" stop-color="#FF2800" />
+      <stop offset="65%" stop-color="#FFFF00" />
+      <stop offset="85%" stop-color="#00BFFF" />
+      <stop offset="100%" stop-color="#00BFFF" stop-opacity="0" />
+    </linearGradient>
+
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <rect width="100%" height="100%" fill="#050505" rx="4" />
+
+  <g transform="translate(40, 20)">
+    <circle cx="50" cy="50" r="45" stroke="#00BFFF" stroke-width="2" fill="none" opacity="0.3" stroke-dasharray="4 4" />
+    <circle cx="50" cy="50" r="30" stroke="#00BFFF" stroke-width="3" fill="none" opacity="0.6" />
+    <circle cx="50" cy="50" r="15" stroke="#00BFFF" stroke-width="4" fill="none" />
+    
+    <circle cx="50" cy="50" r="6" fill="#FF2800" filter="url(#glow)"/>
+
+    <polyline points="-10,50 15,50 25,25 35,85 50,10 65,90 75,35 85,50 110,50"
+              stroke="url(#waveGrad)" stroke-width="4" fill="none" stroke-linejoin="round" stroke-linecap="round" filter="url(#glow)"/>
+  </g>
+
+  <g transform="translate(160, 0)">
+    <text x="0" y="85" font-family="'BIZ UDPGothic', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif" font-size="64" font-weight="bold" fill="url(#textGrad)" letter-spacing="4">
+      EPICA
+    </text>
+    
+    <text x="5" y="115" font-family="'BIZ UDPGothic', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif" font-size="14" font-weight="bold" fill="#00BFFF" letter-spacing="2.5">
+      EARTHQUAKE PREDICTION &amp; INFORMATION
+    </text>
+  </g>
+</svg>
