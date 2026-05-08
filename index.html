@@ -569,6 +569,34 @@ function applyStyleOptimized(layerGroup, styleComputeFn) {
     });
 }
 
+// --- 修正: 1キー・2キー押下時のUI表示切替・ログ表示 ---
+let isExtraButtonsHidden = false;
+document.addEventListener('keydown', e => {
+    // 入力フォーム等にフォーカスがある場合は処理しない
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+
+    if(e.key === '1') {
+        e.preventDefault();
+        e.stopPropagation();
+        isExtraButtonsHidden = !isExtraButtonsHidden;
+        
+        const btnWeather = document.getElementById('btnWeatherWarningMap');
+        const btnReproduce = document.getElementById('btnReproduce');
+        const btnSettings = document.getElementById('btnSettings');
+        
+        if (btnWeather) btnWeather.style.display = isExtraButtonsHidden ? 'none' : '';
+        if (btnReproduce) btnReproduce.style.display = isExtraButtonsHidden ? 'none' : '';
+        if (btnSettings) btnSettings.style.display = isExtraButtonsHidden ? 'none' : '';
+    } else if(e.key === '2') {
+        e.preventDefault();
+        e.stopPropagation();
+        const logPanel = document.getElementById('wsLogPanel');
+        if (logPanel) {
+            logPanel.style.display = (logPanel.style.display === 'none' || logPanel.style.display === '') ? 'block' : 'none';
+        }
+    }
+});
+
 // --- 再現機能 (Recorder & Player) ---
 let isPlaying = false;
 let playbackTimeouts = [];
@@ -977,7 +1005,7 @@ document.getElementById('mapLandColorPicker').value = userSettings.mapLandColor;
 document.getElementById('mapLandColorPicker').addEventListener('input', e => {
     userSettings.mapLandColor = e.target.value;
     saveSettings();
-    // 通常の背景更新 (geojsonLayerはベースとして残すため)
+    // 枠線のスタイルリセット
     if(geojsonLayer) {
         geojsonLayer.setStyle(getLandDefaultStyle());
     }
@@ -1129,7 +1157,6 @@ async function pollJmaXml(){
     if(upd)renderXmlPanels();
 } setInterval(pollJmaXml, 30000);
 
-// 気象警報5分おきクリーンアップ・再評価 (XML高頻度フィード)
 async function forceRefreshWeatherWarningsFromXML() {
     if(isPlaying) return;
     activeWeatherWarnings = {};
@@ -1434,7 +1461,7 @@ function handleTsunamiXml(doc,hl){
 }
 
 // ==========================================
-// 【最適化】Canvasによるポリゴン描画処理
+// 【最適化・修正済】Canvasによるポリゴン描画処理
 // ==========================================
 const polyCanvas = document.createElement('canvas');
 polyCanvas.style.pointerEvents = 'none';
@@ -1479,8 +1506,10 @@ function renderPolygonCanvas() {
     prefData.features.forEach(f => {
         const nm = f.properties._epica_name;
         const fi = f.id || nm;
-        let fillColor = "transparent";
-        let fillOpacity = 0;
+        
+        // 修正: 初期値を defaultStyle に設定し、陸地が消失しないようにする
+        let fillColor = defaultStyle.fillColor;
+        let fillOpacity = defaultStyle.fillOpacity;
 
         // 状態ごとの色を判定
         if (isWeatherWarningMapMode && !isEEWActive && !selectedHistoryQuake) {
@@ -1511,7 +1540,8 @@ function renderPolygonCanvas() {
                 fillColor = scaleColor(mS);
                 fillOpacity = iF ? 0.9 : 0.7;
             } else if (iF) {
-                fillColor = "transparent"; // 枠線はLeafletに任せる
+                fillColor = "transparent";
+                fillOpacity = 0;
             }
         } else {
             let hasColor = !(isRealtimeOnlyMode && !isEEWActive && !selectedHistoryQuake) && currentAreaColors[nm];
@@ -1563,19 +1593,6 @@ function renderPolygonCanvas() {
     ctx.globalAlpha = 1.0; 
 }
 // ==========================================
-
-function updateXmlTsunamiMap(){
-    if(!xmlTsunamiGeojsonLayer){
-        // ※ Leaflet.jsでの津波線描画は重くないためそのまま維持します
-        if(!tsunamiGeojsonLayer)return; 
-        xmlTsunamiGeojsonLayer=L.geoJSON(tsunamiGeojsonLayer.toGeoJSON(),{pane:'tsunamiPane',style:()=>({color:"transparent",weight:0,fillColor:"transparent",fillOpacity:0})}).addTo(lMap);
-    }
-    const d=xmlTsunamiData; if(!d||d.cancelled||!d.areas?.length){xmlTsunamiGeojsonLayer.setStyle({color:"transparent",weight:0,fillColor:"transparent",fillOpacity:0});return;}
-    let aG={}; d.areas.forEach(a=>aG[a.name]=a.grade);
-    
-    // 津波の線はポリゴン数が少ないので従来通り
-    applyStyleOptimized(xmlTsunamiGeojsonLayer, f=>{const g=aG[f.properties._epica_name || f.properties.name||f.properties.nam_ja||f.properties.code]; if(g){let c="#fff",o=0.5; if(g==="MajorWarning")c="#d946ef"; else if(g==="Warning")c="#ef4444"; else if(g==="Watch")c="#facc15"; else if(g==="SlightChange"||g==="Unknown"){c="#00BFFF";o=0.3;} return {color:c,weight:8,opacity:0.8,fillColor:c,fillOpacity:o};} return {color:"transparent",weight:0,fillColor:"transparent",fillOpacity:0};});
-}
 
 let isRealtimeOnlyMode=false; window.currentEarthquakeData=null; window.currentEarthquakePoints=null; window.currentEarthquakeIssue=null; let currentQuakeList=[]; let selectedHistoryQuake=null;
 
@@ -2571,7 +2588,42 @@ function addLog(m){const p=document.getElementById("wsLogPanel"); if(!p)return; 
 let isWolfxConnected=false; 
 function connectWolfx(){const w=new WebSocket("wss://ws-api.wolfx.jp/jma_eew"); w.onmessage=e=>{const d=JSON.parse(e.data); if(d.type==="jma_eew"&&userSettings.eewSource==='wolfx')updateWolfxEEW(d);}; w.onopen=()=>{addLog("📡 Wolfx EEW Connected"); isWolfxConnected=true;}; w.onclose=()=>{addLog("📡 Wolfx EEW Disconnected"); isWolfxConnected=false; setTimeout(connectWolfx,5000);}; w.onerror=()=>{isWolfxConnected=false;};}
 
-function connectP2P(){const p=new WebSocket("wss://api.p2pquake.net/v2/ws"); p.onmessage=e=>{const d=JSON.parse(e.data); if(d.code===551||d.code===552){addLog(`P2P WS 受信: Code ${d.code}`); if(d.code===551){if(isEEWActive)clearEEWDisplay(); loadQuakes();} if(d.code===552)loadQuakes();}}; p.onopen=()=>addLog("📡 P2Pquake Connected"); p.onclose=()=>setTimeout(connectP2P,5000);}
+// --- 修正: WebSocket受信時のAPI遅延対策（ポーリング処理） ---
+let p2pPollTimer = null;
+function connectP2P(){
+    const p=new WebSocket("wss://api.p2pquake.net/v2/ws"); 
+    p.onmessage=e=>{
+        const d=JSON.parse(e.data); 
+        if(d.code===551||d.code===552){
+            addLog(`P2P WS 受信: Code ${d.code}`); 
+            if(d.code===551){
+                if(isEEWActive) clearEEWDisplay(); 
+                
+                // 履歴APIの反映遅延を考慮したポーリング処理（3秒間隔、最大10回）
+                let pollCount = 0;
+                const prevEqTime = lastEqTime;
+                if(p2pPollTimer) clearInterval(p2pPollTimer);
+                
+                // 即座に1回目を取得
+                loadQuakes();
+                
+                p2pPollTimer = setInterval(() => {
+                    pollCount++;
+                    if(lastEqTime !== prevEqTime || pollCount >= 10){
+                        clearInterval(p2pPollTimer);
+                        p2pPollTimer = null;
+                    } else {
+                        loadQuakes();
+                    }
+                }, 3000);
+            } else if(d.code===552) {
+                loadQuakes();
+            }
+        }
+    }; 
+    p.onopen=()=>addLog("📡 P2Pquake Connected"); 
+    p.onclose=()=>setTimeout(connectP2P,5000);
+}
 
 let axisToken=localStorage.getItem('axisToken')||"", axisWs=null, axisRetrySec=1000, axisRetryCount=0, axisHeartbeatTimer=null, axisRetryTimer=null;
 document.getElementById('axisTokenInput').value=axisToken; document.getElementById('btnAxisConnect').addEventListener('click',()=>{axisToken=document.getElementById('axisTokenInput').value; localStorage.setItem('axisToken',axisToken); connectAxis();});
@@ -2862,29 +2914,6 @@ function updateWeatherDisplay() {
         if(panelEl) panelEl.style.borderTopColor = "#d68900"; 
     } 
 } 
-
-// --- 修正: 1キー押下時のUI表示切替 ---
-let isExtraButtonsHidden = false;
-document.addEventListener('keydown', e => {
-    // 入力フォーム等にフォーカスがある場合は処理しない
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
-
-    if(e.key === '1') {
-        // デフォルト挙動と他のイベントへの伝播を防ぎ、誤作動を防止する
-        e.preventDefault();
-        e.stopPropagation();
-        
-        isExtraButtonsHidden = !isExtraButtonsHidden;
-        
-        const btnWeather = document.getElementById('btnWeatherWarningMap');
-        const btnReproduce = document.getElementById('btnReproduce');
-        const btnSettings = document.getElementById('btnSettings');
-        
-        if (btnWeather) btnWeather.style.display = isExtraButtonsHidden ? 'none' : '';
-        if (btnReproduce) btnReproduce.style.display = isExtraButtonsHidden ? 'none' : '';
-        if (btnSettings) btnSettings.style.display = isExtraButtonsHidden ? 'none' : '';
-    }
-});
 
 async function startApp(){
     try{
