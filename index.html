@@ -70,8 +70,26 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 #shindoLegend { position: absolute; bottom: 12px; right: 12px; transform: none; left: auto; display: flex; flex-direction: column-reverse; gap: 2px; background: rgba(0,0,0,0.8); border: 2px solid #444; padding: 4px; z-index: 1000; pointer-events: none; }
 .legendItem { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; border-radius: 2px; }
 
-/* --- 最新情報 (兼 EEW表示領域) --- */
-#latestPanel{ padding: 16px; background: rgba(10, 10, 10, 0.95); border: 2px solid #444; border-radius: 4px; display: flex; flex-direction: row; gap: 16px; overflow-x: auto; min-height: 120px; align-items: center; transition: all 0.3s; }
+/* --- 最新情報 (兼 EEW表示領域) 独立パネルへ変更 --- */
+#latestPanel { 
+    position: fixed; 
+    top: 12px; 
+    left: 444px; /* マップの左端に合わせる */
+    width: 550px; /* 少し大きめに設定 */
+    padding: 16px; 
+    background: rgba(10, 10, 10, 0.95); 
+    border: 2px solid #444; 
+    border-radius: 4px; 
+    display: flex; 
+    flex-direction: row; 
+    gap: 16px; 
+    overflow-x: auto; 
+    min-height: 120px; 
+    align-items: center; 
+    transition: all 0.3s; 
+    z-index: 1000; /* マップより上に表示 */
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+}
 #latestPanel::-webkit-scrollbar { height: 8px; }
 #latestPanel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 4px; }
 .latestWrap{ display:flex; align-items: center; gap: 16px; width: 100%; flex-shrink: 0; }
@@ -89,7 +107,8 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 .detailItem{ display:flex; align-items:center; padding: 12px 16px; border-bottom:1px solid #333; }
 .detailScaleBox{ width: 40px; height: 40px; border-radius: 2px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; margin-right: 16px; flex-shrink: 0; border: 1px solid #fff; }
 .detailPlace { font-size: 16px; font-weight: 700; color: #fff; flex: 1; }
-.detailLpgmBox { background: #FF6600; color: #fff; font-size: 12px; font-weight: 700; padding: 4px 8px; border-radius: 2px; margin-left: auto; border: 1px solid #fff; }
+/* 白文字とオレンジ背景のコントラストを修正 */
+.detailLpgmBox { background: #FF6600; color: #000; font-size: 12px; font-weight: 700; padding: 4px 8px; border-radius: 2px; margin-left: auto; border: 1px solid #000; }
 
 /* --- 津波 --- */
 #tsunamiPanel{ height: 220px; border-left: 8px solid #00BFFF; }
@@ -111,7 +130,8 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 .scaleBox{ width: 90px; display:flex; align-items:center; justify-content:center; font-size: 32px; font-weight:700; flex-shrink:0; border-right: 2px solid #333; }
 .qInfo{ flex:1; padding: 12px 16px; color:#fff; display: flex; flex-direction: column; justify-content: center; gap: 6px; }
 .qName{ font-size: 18px; font-weight:700; word-wrap: break-word; }
-.lpgm-badge { display: inline-flex; align-items: center; justify-content: center; background: #FF6600; border: 1px solid #fff; color: #fff; font-size: 12px; font-weight: 700; padding: 2px 6px; border-radius: 2px; margin-left: 8px; vertical-align: middle; }
+/* 白文字とオレンジ背景のコントラストを修正 */
+.lpgm-badge { display: inline-flex; align-items: center; justify-content: center; background: #FF6600; border: 1px solid #000; color: #000; font-size: 12px; font-weight: 700; padding: 2px 6px; border-radius: 2px; margin-left: 8px; vertical-align: middle; }
 
 /* --- EEW詳細パネル (下部中央フローティング) --- */
 #eewContainer { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); z-index: 10000; display: flex; flex-direction: row; gap: 16px; pointer-events: none; }
@@ -173,11 +193,13 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 .p-section-tsunami h3 { color: #FF6666; border-color: #FF0000; }
 .p-section-earthquake { border-color: #FF00FF; }
 .p-section-earthquake h3 { color: #FF66FF; border-color: #FF00FF; }
-.p-section-warning { border-color: #FF0000; }
-.p-section-warning h3 { color: #FF6666; border-color: #FF0000; }
+/* 視認性向上のため赤枠を少し明るく */
+.p-section-warning { border-color: #FF5555; }
+.p-section-warning h3 { color: #FF6666; border-color: #FF5555; }
 .p-status-badge { display: inline-block; padding: 4px 8px; border-radius: 2px; font-size: 12px; font-weight: 700; margin-left: 6px; }
 .p-status-発表 { background: #FF0000; color: #FFF; border: 1px solid #FFF; }
-.p-status-継続 { background: #FF9900; color: #FFF; border: 1px solid #FFF; }
+/* 白文字とオレンジ背景のコントラストを修正 */
+.p-status-継続 { background: #FF9900; color: #000; border: 1px solid #000; }
 .p-status-解除 { background: #666; color: #CCC; border: 1px solid #999; text-decoration: line-through; }
 .p-table { width: 100%; border-collapse: collapse; margin-top: 8px; margin-bottom: 12px; font-size: 14px; background: #0A0A0A; color: #fff; }
 .p-table th, .p-table td { border: 1px solid #444; padding: 12px; text-align: left; }
@@ -323,6 +345,7 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
     #leafletWrap { left: 420px; right: 380px; }
     #weatherMapPanel.main-map-mode { left: 420px; right: 380px; }
     #weatherTickerPanel { left: 420px; right: 380px; }
+    #latestPanel { left: 420px; }
 }
 
 @media screen and (max-width: 1024px) {
@@ -330,29 +353,32 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
     #startupScreen { position: fixed; }
     #eewPopup { position: fixed !important; top: 12px !important; left: 50% !important; transform: translateX(-50%) !important; font-size: 20px !important; z-index: 9999; }
     
-    #leafletWrap { position: relative !important; width: 100% !important; height: 50vh !important; min-height: 400px; z-index: 5; border: 2px solid #333; order: 1; margin: 0 0 12px 0 !important; flex-shrink: 0; left: auto !important; right: auto !important; top: auto !important; bottom: auto !important;}
+    /* モバイル時: latestPanel を上部に表示 */
+    #latestPanel { position: relative !important; width: 100% !important; left: auto !important; top: auto !important; order: 1; margin: 0 0 12px 0 !important; z-index: 10; box-shadow: none; flex-shrink: 0; }
+    
+    #leafletWrap { position: relative !important; width: 100% !important; height: 50vh !important; min-height: 400px; z-index: 5; border: 2px solid #333; order: 2; margin: 0 0 12px 0 !important; flex-shrink: 0; left: auto !important; right: auto !important; top: auto !important; bottom: auto !important;}
     
     #weatherMapPanel.main-map-mode {
         position: relative !important; width: 100% !important; height: 50vh !important; min-height: 400px;
         z-index: 5; margin: 0 0 12px 0 !important; flex-shrink: 0;
         left: auto !important; right: auto !important; top: auto !important; bottom: auto !important;
-        order: 1; 
+        order: 2; 
     }
 
     #leftSidebar, #rightSidebar { position: relative !important; width: 100% !important; margin: 0 0 12px 0 !important; overflow: visible !important; gap: 12px; flex-shrink: 0; left: auto !important; right: auto !important; top: auto !important; bottom: auto !important;}
-    #leftSidebar { order: 2; }
-    #rightSidebar { order: 3; }
+    #leftSidebar { order: 3; }
+    #rightSidebar { order: 4; }
     
-    #bottomPanelsContainer { position: relative !important; width: 100% !important; margin: 0 0 12px 0 !important; flex-direction: column; height: auto !important; order: 4; flex-shrink: 0; pointer-events: auto; left: auto !important; right: auto !important; top: auto !important; bottom: auto !important;}
+    #bottomPanelsContainer { position: relative !important; width: 100% !important; margin: 0 0 12px 0 !important; flex-direction: column; height: auto !important; order: 5; flex-shrink: 0; pointer-events: auto; left: auto !important; right: auto !important; top: auto !important; bottom: auto !important;}
     #bottomPanelsContainer > div { height: 300px !important; flex: none; margin-bottom: 12px; }
     
-    #weatherTickerPanel { position: relative !important; width: 100% !important; margin: 0 0 12px 0 !important; order: 5; flex-shrink: 0; left: auto !important; right: auto !important; top: auto !important; bottom: auto !important;}
+    #weatherTickerPanel { position: relative !important; width: 100% !important; margin: 0 0 12px 0 !important; order: 6; flex-shrink: 0; left: auto !important; right: auto !important; top: auto !important; bottom: auto !important;}
     
-    #wsLogPanel { position: relative !important; width: 100% !important; margin: 0 0 12px 0 !important; order: 6; height: 120px; flex-shrink: 0; left: auto !important; right: auto !important; top: auto !important; bottom: auto !important;}
-    #clockPanel { position: relative !important; width: 100% !important; margin: 0 !important; order: 7; flex-shrink: 0; left: auto !important; right: auto !important; top: auto !important; bottom: auto !important;}
+    #wsLogPanel { position: relative !important; width: 100% !important; margin: 0 0 12px 0 !important; order: 7; height: 120px; flex-shrink: 0; left: auto !important; right: auto !important; top: auto !important; bottom: auto !important;}
+    #clockPanel { position: relative !important; width: 100% !important; margin: 0 !important; order: 8; flex-shrink: 0; left: auto !important; right: auto !important; top: auto !important; bottom: auto !important;}
     
     #eewContainer { bottom: 120px; flex-direction: column; }
-    #shakeDetectPanel { position: relative !important; bottom: auto !important; left: auto !important; width: 100% !important; margin-bottom: 12px; order: 8; }
+    #shakeDetectPanel { position: relative !important; bottom: auto !important; left: auto !important; width: 100% !important; margin-bottom: 12px; order: 9; }
 }
 
 @media screen and (max-width: 600px) {
@@ -403,7 +429,6 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 </div>
 
 <div id="leftSidebar">
-    <div id="latestPanel"></div>
     <div id="detailPanel" class="base-panel"><div id="detailScrollArea"></div></div>
     <div id="tsunamiPanel" class="base-panel">
         <div id="tsunamiScrollArea">
@@ -412,6 +437,8 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
     </div>
     <div id="quakePanel"></div>
 </div>
+
+<div id="latestPanel"></div>
 
 <div id="rightSidebar">
     <div id="clockPanel">--/--/-- --:--:--</div>
@@ -477,7 +504,7 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 </div>
 
 <div id="weatherTickerPanel">
-    <div class="ticker-label">明日の全国天気</div>
+    <div class="ticker-label" id="ticker-label">全国天気</div>
     <div class="ticker-viewport">
         <div class="ticker-content" id="ticker-content">
             <span class="weather-item" style="border: none;">気象庁のデータを取得しています...</span>
@@ -597,7 +624,6 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
         </div>
     </div>
 </div>
-
 <script type="module">
 // --- 共通TTS文字列生成 ---
 function getQuakeTTS(lE) {
@@ -1156,8 +1182,17 @@ async function generateDailySummary(tStr, n){
         let c=tq.length, mx=-1, mxS="", mxN="";
         tq.forEach(q=>{const s=fmt.shindo(q.earthquake.maxScale,q.earthquake.hypocenter.depth), nm=fmt.intensityToNum(s); if(nm>mx){mx=nm; mxS=s; mxN=q.earthquake.hypocenter.name;}});
         let html="", spT="本日の地震情報まとめ。";
-        if(c===0){html="本日は、震度1以上を観測する地震はありませんでした。"; spT+=html;}else{const b=scaleColor(mxS), tc=getContrastColor(b); html=`本日は合計 <b style="color:#FF9900;">${c}</b> 回の地震が観測されました。<br>最大震度は <b style="background:${b};color:${tc};padding:2px 6px;border-radius:2px;display:inline-block;">${mxS}</b> (${mxN}) でした。`; spT+=`本日は合計、${c}回の地震が観測されました。最大震度は、${mxS.replace("強","きょう").replace("弱","じゃく")}、震源地は、${mxN}、でした。`;}
-        const p=document.getElementById("dailySummaryPanel"); if(p)p.style.display="block"; updatePanelScroll("summaryScrollArea",`<div class="info-title">本日(${tStr.replace(/-/g,"/")})のまとめ</div><div class="info-text">${html}</div>`);
+        if(c===0){
+            html="本日は、震度1以上を観測する地震はありませんでした。"; 
+            spT+=html;
+        }else{
+            const b=scaleColor(mxS), tc=getContrastColor(b); 
+            html=`本日は合計 <b style="color:#FF9900;">${c}</b> 回の地震が観測されました。<br>最大震度は <b style="background:${b};color:${tc};padding:2px 6px;border-radius:2px;display:inline-block;">${mxS}</b> (${mxN}) でした。`; 
+            spT+=`本日は合計、${c}回の地震が観測されました。最大震度は、${mxS.replace("強","きょう").replace("弱","じゃく")}、震源地は、${mxN}、でした。`;
+        }
+        const p=document.getElementById("dailySummaryPanel"); 
+        if(p)p.style.display="block"; 
+        updatePanelScroll("summaryScrollArea",`<div class="info-title">本日(${tStr.replace(/-/g,"/")})のまとめ</div><div class="info-text">${html}</div>`);
         playPippiBeep(); setTimeout(()=>speakText(spT), 500);
     }catch(e){}
 }
@@ -1307,8 +1342,9 @@ function handleHypocenterUpdateXml(doc){
     let nS=doc.querySelector('Body > Intensity > Observation > MaxInt')?.textContent||oS;
     
     const updatePanel = document.getElementById('eqUpdatePanel');
-    document.getElementById('eqUpdateText').innerHTML=`<span style="color:#CCC;">発生時刻:</span> ${tS}<br><br><div style="display:flex;justify-content:space-around;align-items:center;background:#111;padding:14px;border-radius:4px; border:1px solid #444;"><div><span style="color:#CCC;font-size:12px;">[前]</span><br>${oP}<br>${oCoord}<br>震度${oS} / M${oM}</div><div style="font-size:28px;color:#00FF00;font-weight:bold;">⇒</div><div><span style="color:#00FF00;font-size:12px;">[後]</span><br>${hA}<br>${nCoord}<br>震度${nS} / M${nMS}</div></div>`;
     updatePanel.style.display='block';
+    
+    document.getElementById('eqUpdateText').innerHTML=`<span style="color:#CCC;">発生時刻:</span> ${tS}<br><br><div style="display:flex;justify-content:space-around;align-items:center;background:#111;padding:14px;border-radius:4px; border:1px solid #444;"><div><span style="color:#CCC;font-size:12px;">[前]</span><br>${oP}<br>${oCoord}<br>震度${oS} / M${oM}</div><div style="font-size:28px;color:#00FF00;font-weight:bold;">⇒</div><div><span style="color:#00FF00;font-size:12px;">[後]</span><br>${hA}<br>${nCoord}<br>震度${nS} / M${nMS}</div></div>`;
     
     if(eqUpdateTimeout) clearTimeout(eqUpdateTimeout);
     eqUpdateTimeout = setTimeout(() => { updatePanel.style.display = 'none'; }, 60000);
@@ -1376,7 +1412,6 @@ function handleLpgmXml(doc) {
         }
     }
 }
-
 async function processXmlString(xt, typ, ovUrl=null){
     try{
         if(Recorder.isRecording && !isPlaying) Recorder.triggerXML(xt, typ);
@@ -1447,8 +1482,9 @@ async function processXmlString(xt, typ, ovUrl=null){
                         if(kn&&st) {
                             let wT_color = "#FFF";
                             let level = 0;
-                            if (kn.includes("特別警報")) { wT_color = "#CC00CC"; level = 3; }
-                            else if (kn.includes("警報")) { wT_color = "#FF2800"; level = 2; }
+                            // 視認性向上のため、黒背景での赤色を明るく(#FF5555)に修正
+                            if (kn.includes("特別警報")) { wT_color = "#CC88FF"; level = 3; }
+                            else if (kn.includes("警報")) { wT_color = "#FF5555"; level = 2; }
                             else if (kn.includes("注意報")) { wT_color = "#F2E700"; level = 1; }
                             
                             if(st === "発表" || st === "継続") {
@@ -1505,8 +1541,9 @@ async function processXmlString(xt, typ, ovUrl=null){
         const eEl=bdy?.querySelector('Earthquake'), intEl=bdy?.querySelector('Intensity');
         if(eEl||intEl){
             cFnd=true; ht+=`<div class="p-info-section p-section-earthquake"><h3>📳 地震情報</h3>`;
-            if(eEl){const cd=eEl.querySelector('Hypocenter > Area > Coordinate, Hypocenter > Area > jmx_eb\\:Coordinate'); ht+=`<div style="background:#0A0A0A; padding:12px; border:1px solid #444; border-radius:4px; margin-bottom:12px;"><strong>発生時刻:</strong> ${formatTimeXml(eEl.querySelector('OriginTime')?.textContent)}<br><strong>震央:</strong> ${eEl.querySelector('Hypocenter > Area > Name')?.textContent}<br><strong>深さ・座標:</strong> ${cd?cd.getAttribute('description'):'不明'}<br><strong>規模:</strong> <span style="font-size:1.2em; color:#FF0000; font-weight:700;">${eEl.querySelector('Magnitude, jmx_eb\\:Magnitude')?.getAttribute('description')||'M'+eEl.querySelector('Magnitude')?.textContent}</span></div>`;}
-            if(intEl){const mx=intEl.querySelector('Observation > MaxInt')?.textContent; if(mx)ht+=`<p><strong>最大震度:</strong> <span style="font-size:1.4em; color:#FF0000; font-weight:700;">${mx}</span></p>`; const pr=intEl.querySelectorAll('Pref'); if(pr.length){ht+=`<h4>各地の震度</h4><div class="p-data-list">`; pr.forEach(p=>{ht+=`<div style="margin-bottom:8px;"><strong>${p.querySelector('Name')?.textContent} (最大 ${p.querySelector('MaxInt')?.textContent})</strong><ul style="list-style:none; margin:4px 0 0 10px; padding:0;">`; p.querySelectorAll('Area').forEach(a=>ht+=`<li>・${a.querySelector('Name')?.textContent} (震度 ${a.querySelector('MaxInt')?.textContent})</li>`); ht+=`</ul></div>`;}); ht+=`</div>`;}} ht+=`</div>`;
+            // 視認性向上のため、黒背景での赤色を明るく(#FF5555)に修正
+            if(eEl){const cd=eEl.querySelector('Hypocenter > Area > Coordinate, Hypocenter > Area > jmx_eb\\:Coordinate'); ht+=`<div style="background:#0A0A0A; padding:12px; border:1px solid #444; border-radius:4px; margin-bottom:12px;"><strong>発生時刻:</strong> ${formatTimeXml(eEl.querySelector('OriginTime')?.textContent)}<br><strong>震央:</strong> ${eEl.querySelector('Hypocenter > Area > Name')?.textContent}<br><strong>深さ・座標:</strong> ${cd?cd.getAttribute('description'):'不明'}<br><strong>規模:</strong> <span style="font-size:1.2em; color:#FF5555; font-weight:700;">${eEl.querySelector('Magnitude, jmx_eb\\:Magnitude')?.getAttribute('description')||'M'+eEl.querySelector('Magnitude')?.textContent}</span></div>`;}
+            if(intEl){const mx=intEl.querySelector('Observation > MaxInt')?.textContent; if(mx)ht+=`<p><strong>最大震度:</strong> <span style="font-size:1.4em; color:#FF5555; font-weight:700;">${mx}</span></p>`; const pr=intEl.querySelectorAll('Pref'); if(pr.length){ht+=`<h4>各地の震度</h4><div class="p-data-list">`; pr.forEach(p=>{ht+=`<div style="margin-bottom:8px;"><strong>${p.querySelector('Name')?.textContent} (最大 ${p.querySelector('MaxInt')?.textContent})</strong><ul style="list-style:none; margin:4px 0 0 10px; padding:0;">`; p.querySelectorAll('Area').forEach(a=>ht+=`<li>・${a.querySelector('Name')?.textContent} (震度 ${a.querySelector('MaxInt')?.textContent})</li>`); ht+=`</ul></div>`;}); ht+=`</div>`;}} ht+=`</div>`;
         }
 
         if(!cFnd&&!eEl&&!intEl&&!hasW){const ga=Array.from(doc.querySelectorAll('Body > Area')); if(ga.length){ht+=`<div class="p-info-section"><h3>その他の情報</h3><table class="p-table"><tr><th>地域</th><th>詳細</th></tr>`; ga.slice(0,30).forEach(a=>ht+=`<tr><td>${a.querySelector('Name')?.textContent||"不明"}</td><td>${a.querySelector('MaxInt')?.textContent||a.querySelector('Kind > Name')?.textContent||"-"}</td></tr>`); ht+=`</table>`; if(ga.length>30)ht+=`<p><small>※他 ${ga.length-30} 件省略</small></p>`; ht+=`</div>`;}}
@@ -2029,7 +2066,8 @@ function renderLatestPanel() {
             const sb = scaleColor(s0);
             const ct = e0.domesticTsunami === "Checking" ? `<span class="tag-checking">調査中</span>` : "";
             const dfs = s0.length > 1 ? (s0 === "不明" || s0 === "遠地" ? "24px" : "38px") : "52px";
-            let lpgmHtml = e0.maxLpgmInt ? `<span class="tag lpgm-tag" style="background:#FF6600;color:#fff;">長周期 階級${e0.maxLpgmInt}</span>` : "";
+            // 白文字とオレンジ背景のコントラストを修正
+            let lpgmHtml = e0.maxLpgmInt ? `<span class="tag lpgm-tag" style="background:#FF6600;color:#000;">長周期 階級${e0.maxLpgmInt}</span>` : "";
             
             const mC = magColor(e0.hypocenter.magnitude);
             const dC = depthColor(e0.hypocenter.depth);
@@ -2969,26 +3007,98 @@ function updateWeatherDisplay() {
     } 
 } 
 
-// --- 明日の天気予報ティッカー関連 ---
+// --- 曜日/時間による天気ティッカー機能の統合 (n.html由来) ---
 const API_AREA_URL = "https://www.jma.go.jp/bosai/common/const/area.json";
 const API_FORECAST_BASE = "https://www.jma.go.jp/bosai/forecast/data/forecast/";
 const ICON_BASE_URL = "https://www.jma.go.jp/bosai/forecast/img/";
 
-function getTomorrowString() {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const yyyy = tomorrow.getFullYear();
-    const mm = String(tomorrow.getMonth() + 1).padStart(2, '0');
-    const dd = String(tomorrow.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
+// 現在時刻をもとに「対象の日付文字列」と「ラベル名」を決定
+function getTargetDateInfo() {
+    const now = new Date();
+    const currentHour = now.getHours();
+    
+    const targetDate = new Date();
+    let labelText = "";
+
+    if (currentHour >= 21) {
+        // 21時〜23時は「明日の天気」
+        targetDate.setDate(targetDate.getDate() + 1);
+        labelText = "明日の全国天気";
+    } else if (currentHour >= 17) {
+        // 17時〜20時は「今夜の天気」 (対象日は今日)
+        labelText = "今夜の全国天気";
+    } else {
+        // 0時〜16時は「今日の天気」 (対象日は今日)
+        labelText = "今日の全国天気";
+    }
+
+    const yyyy = targetDate.getFullYear();
+    const mm = String(targetDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(targetDate.getDate()).padStart(2, '0');
+
+    return {
+        dateStr: `${yyyy}-${mm}-${dd}`,
+        label: labelText
+    };
+}
+
+function extractWeatherData(data, targetStr) {
+    let wCode = "100", pop = "-", tMax = "-", tMin = "-";
+
+    for (const d of data) {
+        if (!d.timeSeries) continue;
+
+        for (const ts of d.timeSeries) {
+            if (!ts.areas || !ts.areas[0]) continue;
+            
+            const defines = ts.timeDefines;
+            const areas = ts.areas[0];
+            const targetIndices = [];
+
+            defines.forEach((t, i) => {
+                if (t.startsWith(targetStr)) targetIndices.push(i);
+            });
+
+            if (targetIndices.length === 0) continue;
+
+            if (areas.weatherCodes && wCode === "100") {
+                wCode = areas.weatherCodes[targetIndices[0]];
+            }
+
+            if (areas.pops && pop === "-") {
+                const popsArray = targetIndices.map(i => parseInt(areas.pops[i])).filter(n => !isNaN(n));
+                if (popsArray.length > 0) {
+                    pop = Math.max(...popsArray).toString();
+                } else if (areas.pops[targetIndices[0]] && areas.pops[targetIndices[0]] !== "") {
+                    pop = areas.pops[targetIndices[0]];
+                }
+            }
+
+            if (areas.tempsMax && tMax === "-") {
+                const temp = areas.tempsMax[targetIndices[0]];
+                if (temp && temp !== "") tMax = temp;
+            }
+
+            if (areas.tempsMin && tMin === "-") {
+                const temp = areas.tempsMin[targetIndices[0]];
+                if (temp && temp !== "") tMin = temp;
+            }
+        }
+    }
+
+    return { wCode, pop, tMax, tMin };
 }
 
 async function initTicker() {
     try {
+        const targetInfo = getTargetDateInfo();
+        const tickerLabel = document.getElementById('ticker-label');
+        if (tickerLabel) tickerLabel.innerText = targetInfo.label;
+        const targetStr = targetInfo.dateStr;
+
         const areaRes = await fetch(API_AREA_URL);
         const areaData = await areaRes.json();
         const offices = areaData.offices;
-        const tomorrowStr = getTomorrowString();
 
         let weatherItemsHTML = "";
         let validRegionCount = 0;
@@ -3000,34 +3110,14 @@ async function initTicker() {
                 const res = await fetch(`${API_FORECAST_BASE}${code}.json`);
                 const data = await res.json();
                 
-                const weeklyData = data[1] || data.find(d => d.timeSeries[0].timeDefines.length > 4);
-                if (!weeklyData) return null;
-
-                const timeDefines = weeklyData.timeSeries[0].timeDefines;
-                const tmrwIdx = timeDefines.findIndex(t => t.startsWith(tomorrowStr));
-                if (tmrwIdx === -1) return null;
-
-                const weatherArea = weeklyData.timeSeries[0].areas[0];
-                const weatherCode = weatherArea.weatherCodes[tmrwIdx];
-                const pop = (weatherArea.pops && weatherArea.pops[tmrwIdx]) ? weatherArea.pops[tmrwIdx] : "-";
-
-                const tempSeries = weeklyData.timeSeries.find(ts => ts.areas[0].tempsMax !== undefined);
-                let tMax = "-", tMin = "-";
-                if (tempSeries) {
-                    const tempTimeDefines = tempSeries.timeDefines;
-                    const tmrwTempIdx = tempTimeDefines.findIndex(t => t.startsWith(tomorrowStr));
-                    if (tmrwTempIdx !== -1) {
-                        tMax = tempSeries.areas[0].tempsMax[tmrwTempIdx] || "-";
-                        tMin = tempSeries.areas[0].tempsMin[tmrwTempIdx] || "-";
-                    }
-                }
+                const wData = extractWeatherData(data, targetStr);
 
                 return {
                     name: offices[code].name,
-                    iconUrl: `${ICON_BASE_URL}${weatherCode}.svg`,
-                    pop: pop,
-                    tMax: tMax,
-                    tMin: tMin
+                    iconUrl: `${ICON_BASE_URL}${wData.wCode}.svg`,
+                    pop: wData.pop,
+                    tMax: wData.tMax,
+                    tMin: wData.tMin
                 };
             } catch (e) {
                 return null;
