@@ -70,12 +70,12 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 #shindoLegend { position: absolute; bottom: 12px; right: 12px; transform: none; left: auto; display: flex; flex-direction: column-reverse; gap: 2px; background: rgba(0,0,0,0.8); border: 2px solid #444; padding: 4px; z-index: 1000; pointer-events: none; }
 .legendItem { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; border-radius: 2px; }
 
-/* --- 最新情報 (兼 EEW表示領域) 独立パネルへ変更 --- */
+/* --- 最新情報 (兼 EEW表示領域) --- */
 #latestPanel { 
     position: fixed; 
     top: 12px; 
-    left: 444px; /* マップの左端に合わせる */
-    width: 550px; /* 少し大きめに設定 */
+    left: 444px;
+    width: 550px;
     padding: 16px; 
     background: rgba(10, 10, 10, 0.95); 
     border: 2px solid #444; 
@@ -87,7 +87,7 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
     min-height: 120px; 
     align-items: center; 
     transition: all 0.3s; 
-    z-index: 1000; /* マップより上に表示 */
+    z-index: 1000;
     box-shadow: 0 4px 15px rgba(0,0,0,0.5);
 }
 #latestPanel::-webkit-scrollbar { height: 8px; }
@@ -100,6 +100,40 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 .tag-checking { background: #FF9900; color: #000; padding: 4px 8px; font-weight: 700; font-size: 14px; margin-left: 8px; border-radius: 2px; }
 .tag { display: inline-block; padding: 4px 8px; border-radius: 2px; font-size: 14px; font-weight: 700; margin-right: 6px; text-align: center; }
 
+/* --- J-ALERT表示コンテナ --- */
+#jalertContainer {
+    position: fixed;
+    top: 150px;
+    left: 444px;
+    width: 550px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 1000;
+    pointer-events: none;
+}
+.jalert-card {
+    background: rgba(10, 10, 10, 0.98);
+    border: 4px solid #FF00FF;
+    border-radius: 4px;
+    padding: 16px;
+    color: #FFF;
+    pointer-events: auto;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.8);
+    animation: blinkJAlert 1s infinite alternate;
+}
+.jalert-card.cancel {
+    border-color: #666;
+    animation: none;
+}
+@keyframes blinkJAlert {
+    from { border-color: #FF00FF; }
+    to { border-color: #AA00AA; }
+}
+.jalert-title { font-size: 20px; font-weight: bold; color: #FF00FF; margin-bottom: 8px; }
+.jalert-card.cancel .jalert-title { color: #CCC; }
+.jalert-body { font-size: 14px; line-height: 1.5; max-height: 150px; overflow-y: auto; white-space: pre-wrap; }
+
 /* --- 震度詳細 --- */
 #detailPanel{ height: 180px; }
 #detailScrollArea{ width:100%; height:100%; overflow-y:auto; transition: opacity 0.8s ease-in-out; opacity: 1; }
@@ -107,7 +141,6 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 .detailItem{ display:flex; align-items:center; padding: 12px 16px; border-bottom:1px solid #333; }
 .detailScaleBox{ width: 40px; height: 40px; border-radius: 2px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; margin-right: 16px; flex-shrink: 0; border: 1px solid #fff; }
 .detailPlace { font-size: 16px; font-weight: 700; color: #fff; flex: 1; }
-/* 白文字とオレンジ背景のコントラストを修正 */
 .detailLpgmBox { background: #FF6600; color: #000; font-size: 12px; font-weight: 700; padding: 4px 8px; border-radius: 2px; margin-left: auto; border: 1px solid #000; }
 
 /* --- 津波 --- */
@@ -130,7 +163,6 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 .scaleBox{ width: 90px; display:flex; align-items:center; justify-content:center; font-size: 32px; font-weight:700; flex-shrink:0; border-right: 2px solid #333; }
 .qInfo{ flex:1; padding: 12px 16px; color:#fff; display: flex; flex-direction: column; justify-content: center; gap: 6px; }
 .qName{ font-size: 18px; font-weight:700; word-wrap: break-word; }
-/* 白文字とオレンジ背景のコントラストを修正 */
 .lpgm-badge { display: inline-flex; align-items: center; justify-content: center; background: #FF6600; border: 1px solid #000; color: #000; font-size: 12px; font-weight: 700; padding: 2px 6px; border-radius: 2px; margin-left: 8px; vertical-align: middle; }
 
 /* --- EEW詳細パネル (下部中央フローティング) --- */
@@ -193,12 +225,10 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 .p-section-tsunami h3 { color: #FF6666; border-color: #FF0000; }
 .p-section-earthquake { border-color: #FF00FF; }
 .p-section-earthquake h3 { color: #FF66FF; border-color: #FF00FF; }
-/* 視認性向上のため赤枠を少し明るく */
 .p-section-warning { border-color: #FF5555; }
 .p-section-warning h3 { color: #FF6666; border-color: #FF5555; }
 .p-status-badge { display: inline-block; padding: 4px 8px; border-radius: 2px; font-size: 12px; font-weight: 700; margin-left: 6px; }
 .p-status-発表 { background: #FF0000; color: #FFF; border: 1px solid #FFF; }
-/* 白文字とオレンジ背景のコントラストを修正 */
 .p-status-継続 { background: #FF9900; color: #000; border: 1px solid #000; }
 .p-status-解除 { background: #666; color: #CCC; border: 1px solid #999; text-decoration: line-through; }
 .p-table { width: 100%; border-collapse: collapse; margin-top: 8px; margin-bottom: 12px; font-size: 14px; background: #0A0A0A; color: #fff; }
@@ -346,6 +376,7 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
     #weatherMapPanel.main-map-mode { left: 420px; right: 380px; }
     #weatherTickerPanel { left: 420px; right: 380px; }
     #latestPanel { left: 420px; }
+    #jalertContainer { left: 420px; }
 }
 
 @media screen and (max-width: 1024px) {
@@ -353,8 +384,8 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
     #startupScreen { position: fixed; }
     #eewPopup { position: fixed !important; top: 12px !important; left: 50% !important; transform: translateX(-50%) !important; font-size: 20px !important; z-index: 9999; }
     
-    /* モバイル時: latestPanel を上部に表示 */
     #latestPanel { position: relative !important; width: 100% !important; left: auto !important; top: auto !important; order: 1; margin: 0 0 12px 0 !important; z-index: 10; box-shadow: none; flex-shrink: 0; }
+    #jalertContainer { position: relative !important; width: 100% !important; left: auto !important; top: auto !important; order: 1; margin: 0 0 12px 0 !important; }
     
     #leafletWrap { position: relative !important; width: 100% !important; height: 50vh !important; min-height: 400px; z-index: 5; border: 2px solid #333; order: 2; margin: 0 0 12px 0 !important; flex-shrink: 0; left: auto !important; right: auto !important; top: auto !important; bottom: auto !important;}
     
@@ -398,6 +429,7 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
     .weather-item { font-size: 14px; padding: 0 15px; }
     .weather-icon { width: 30px; height: 30px; margin: 0 5px; }
     .pop, .temp-max, .temp-min { font-size: 14px; }
+    .jalert-card { width: 90vw; box-sizing: border-box; }
 }
 </style>
 </head>
@@ -439,6 +471,7 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 </div>
 
 <div id="latestPanel"></div>
+<div id="jalertContainer"></div>
 
 <div id="rightSidebar">
     <div id="clockPanel">--/--/-- --:--:--</div>
@@ -471,7 +504,7 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
         <div id="weatherMapInner" style="flex: 1; background:#050505;"></div>
     </div>
 
-    <div id="dailySummaryPanel" class="base-panel" style="border-top: 8px solid #A020F0; display:none; height: 140px;">
+    <div id="dailySummaryPanel" class="base-panel" style="display:none; border-top: 8px solid #A020F0; height: 140px;">
         <div class="axisHeader" style="color: #DDA0DD;">本日のまとめ (DAILY SUMMARY)</div>
         <div id="summaryScrollArea" class="axisScrollArea"><div class="info-text" style="text-align:center;padding-top:20px;">待機中...</div></div>
     </div>
@@ -547,6 +580,11 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 <div id="settingsModal">
     <div class="settingsHeader">各種設定 <button id="btnCloseSettings">×</button></div>
     <div class="settingsBody">
+        <div class="setting-group">
+            <div class="setting-group-title">拡張機能・自動処理</div>
+            <div class="setting-item"><label>J-ALERT(国民保護情報)の受信 <input type="checkbox" id="chkJAlert"></label></div>
+            <div class="setting-item"><label>マップ自動切り替え (1分おき) <input type="checkbox" id="chkAutoMapSwap"></label></div>
+        </div>
         <div class="setting-group">
             <div class="setting-group-title">再現機能 (REPRODUCTION)</div>
             <div class="setting-item">
@@ -894,6 +932,7 @@ let activeWeatherWarnings = {};
 let isWeatherWarningMapMode = false;
 
 const defaultSettings = {
+    jAlertEnable: true, autoMapSwap: false,
     pushNotify: false, eewPrediction: false, eewRealtimePaint: false, showObsPoints: false, shakeDetect: false, estimateEpicenter: false, shakeThreshold: 8, eewSource: 'wolfx', volume: 0.5, alarmPitch: 1500, speechPitch: 1.0, speechRate: 1.5, speechVolume: 1.0, volFirst: 0.5, volLast: 0.5, volTsunami: 0.5, volUpdateApi: 0.5, volUpdateEew: 0.5, volWarning: 0.5, volBgm: 0.3, fsLatest: 100, fsDetail: 100, fsTsunami: 100, fsHistory: 100, fsComment: 100, fsXml: 100, fsWeatherWarning: 100, bgColor: "#050505", customShindoColors: false, weatherMapZoom: 5,
     shindoColors: { "1": "#f2f2ff", "2": "#0000ff", "3": "#00c800", "4": "#fae600", "5弱": "#ff9900", "5強": "#ff2800", "6弱": "#fa0000", "6強": "#a00000", "7": "#960096" },
     showMapTile: true, mapOceanColor: "#050505", mapLandColor: "#222222", mapLandTransparent: true
@@ -973,6 +1012,13 @@ function toggleMapSwap() {
 
     isMapSwapped = !isMapSwapped;
     
+    const uiElements = [
+        document.getElementById('tsunamiEvacuateLabel'),
+        document.getElementById('displayModeWrap'),
+        document.getElementById('megaQuakeTelop'),
+        document.getElementById('shindoLegend')
+    ];
+
     if (isMapSwapped) {
         lAnchor.parentNode.insertBefore(weatherMapPanel, lAnchor);
         weatherMapPanel.classList.add('main-map-mode');
@@ -980,6 +1026,9 @@ function toggleMapSwap() {
         anchor.parentNode.insertBefore(leafletWrap, anchor);
         leafletWrap.classList.add('sidebar-map-mode');
         
+        // UI要素をアクティブなメインマップへ移動
+        uiElements.forEach(el => { if(el) weatherMapPanel.appendChild(el); });
+
         setTimeout(() => {
             if(weatherMap) weatherMap.setView([37.5, 137], userSettings.weatherMapZoom || 5);
         }, 150);
@@ -989,6 +1038,9 @@ function toggleMapSwap() {
         
         anchor.parentNode.insertBefore(weatherMapPanel, anchor);
         weatherMapPanel.classList.remove('main-map-mode');
+
+        // UI要素をアクティブなメインマップへ移動
+        uiElements.forEach(el => { if(el) leafletWrap.appendChild(el); });
     }
     
     setTimeout(() => {
@@ -1123,6 +1175,33 @@ document.getElementById('chkMapLandTransparent').addEventListener('change', e =>
 
 document.getElementById('chkPushNotify').checked=userSettings.pushNotify; document.getElementById('chkPushNotify').addEventListener('change', async e=>{if(e.target.checked){if(!("Notification" in window)){alert("非対応"); e.target.checked=false;}else{const p=await Notification.requestPermission(); if(p!=="granted"){alert("拒否されました"); e.target.checked=false;}}} userSettings.pushNotify=e.target.checked; saveSettings();});
 ['chkEewPrediction','chkEewRealtimePaint','chkShakeDetect','chkEstimateEpicenter'].forEach(id=>{let el=document.getElementById(id); el.checked=userSettings[id.replace('chk','')]; el.addEventListener('change',e=>{userSettings[id.replace('chk','')]=e.target.checked; saveSettings();});});
+
+document.getElementById('chkJAlert').checked = userSettings.jAlertEnable;
+document.getElementById('chkJAlert').addEventListener('change', e => {
+    userSettings.jAlertEnable = e.target.checked;
+    saveSettings();
+    fetchJAlert(); 
+});
+
+document.getElementById('chkAutoMapSwap').checked = userSettings.autoMapSwap;
+document.getElementById('chkAutoMapSwap').addEventListener('change', e => {
+    userSettings.autoMapSwap = e.target.checked;
+    saveSettings();
+    checkAutoMapSwap();
+});
+
+let autoMapSwapTimer = null;
+function checkAutoMapSwap() {
+    if (userSettings.autoMapSwap) {
+        if(!autoMapSwapTimer) autoMapSwapTimer = setInterval(toggleMapSwap, 60000);
+    } else {
+        if(autoMapSwapTimer) {
+            clearInterval(autoMapSwapTimer);
+            autoMapSwapTimer = null;
+        }
+    }
+}
+
 document.getElementById('chkShowObsPoints').checked=userSettings.showObsPoints; document.getElementById('chkShowObsPoints').addEventListener('change', e=>{userSettings.showObsPoints=e.target.checked; saveSettings(); refreshMapDisplay();});
 document.getElementById('shakeThresholdSlider').value=userSettings.shakeThreshold||8; document.getElementById('shakeThresholdVal').innerText=(((userSettings.shakeThreshold||8)-6)*0.5).toFixed(1); document.getElementById('shakeThresholdSlider').addEventListener('input', e=>{const v=parseInt(e.target.value); document.getElementById('shakeThresholdVal').innerText=((v-6)*0.5).toFixed(1); userSettings.shakeThreshold=v; saveSettings();});
 document.getElementById('selEewSource').value=userSettings.eewSource; document.getElementById('selEewSource').addEventListener('change', e=>{userSettings.eewSource=e.target.value; saveSettings();});
@@ -1221,6 +1300,92 @@ function playPippiBeep(){
     const playN=(o)=>{const osc=ctx.createOscillator(), g=ctx.createGain(); osc.type='sine'; osc.frequency.setValueAtTime(2000, ctx.currentTime+o); g.gain.setValueAtTime(0, ctx.currentTime+o); g.gain.linearRampToValueAtTime(0.4*userSettings.volume, ctx.currentTime+o+0.01); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+o+0.1); osc.connect(g); g.connect(ctx.destination); osc.start(ctx.currentTime+o); osc.stop(ctx.currentTime+o+0.15);};
     playN(0); playN(0.15);
 }
+
+// --- J-ALERT 取得機能 ---
+let activeJAlerts = new Map();
+let jalertHashList = new Set();
+
+async function fetchJAlert() {
+    if (!userSettings.jAlertEnable) {
+        if(activeJAlerts.size > 0) {
+            activeJAlerts.clear();
+            renderJAlerts();
+        }
+        return;
+    }
+    try {
+        const url = "https://emergency-weather.yahoo.co.jp/weather/jp/jalert/";
+        // Yahoo HTMLをCORS回避プロキシ経由で取得 (allorigins等を利用)
+        const res = await fetch("https://api.allorigins.win/get?url=" + encodeURIComponent(url));
+        const json = await res.json();
+        const html = json.contents;
+        
+        // Qiitaの手法に則り、<p class="margin_b20"> のテキストを抽出
+        const regex = /<p class="margin_b20">([\s\S]*?)<\/p>/g;
+        let match;
+        let foundAlerts = [];
+        
+        while ((match = regex.exec(html)) !== null) {
+            let alertText = match[1].replace(/<br\s*\/?>/g, "\n").replace(/<[^>]+>/g, "").trim();
+            if(alertText && !alertText.includes("現在、発表されている情報はありません")) {
+                foundAlerts.push(alertText);
+            }
+        }
+        
+        for (let text of foundAlerts) {
+            // 前方30文字で簡易ハッシュ化 (ID管理用)
+            let hash = text.substring(0, 30).replace(/\s/g, "");
+            let isCancel = text.includes("解除");
+            
+            // 未知のJ-ALERTか判定
+            if (!jalertHashList.has(hash)) {
+                jalertHashList.add(hash);
+                
+                let id = "jalert_" + Date.now() + Math.floor(Math.random() * 1000);
+                
+                // 発表内容に「解除」というワードが含まれれば解除判定にする。
+                if (isCancel) {
+                    activeJAlerts.forEach(al => {
+                        al.isCancel = true;
+                        al.title = "国民保護情報 (解除)";
+                    });
+                } else {
+                    // Jアラート受信時Tsunami.mp3を再生する
+                    seTsunami.currentTime = 0;
+                    seTsunami.play().catch(e => {});
+                }
+                
+                // 72時間経過で消えるのを回避するため、activeJAlerts に保持し続ける。
+                activeJAlerts.set(id, {
+                    id: id,
+                    title: isCancel ? "国民保護情報 (解除)" : "国民保護情報 (J-ALERT)",
+                    body: text,
+                    isCancel: isCancel
+                });
+                renderJAlerts();
+            }
+        }
+    } catch(e) {
+        console.error("J-ALERT fetch error:", e);
+    }
+}
+
+function renderJAlerts() {
+    const container = document.getElementById("jalertContainer");
+    if(!container) return;
+    
+    container.innerHTML = "";
+    activeJAlerts.forEach(al => {
+        const card = document.createElement("div");
+        card.className = "jalert-card" + (al.isCancel ? " cancel" : "");
+        card.innerHTML = `
+            <div class="jalert-title">⚠️ ${al.title}</div>
+            <div class="jalert-body">${al.body}</div>
+        `;
+        container.appendChild(card);
+    });
+}
+setInterval(fetchJAlert, 60000); // 1分ごとに確認
 
 function updateMegaQuakeAlertPanel(){
     const p=document.getElementById('megaQuakeAlertPanel'), sa=document.getElementById('megaQuakeAlertScrollArea'); if(!p||!sa)return; let h=[];
@@ -1412,6 +1577,7 @@ function handleLpgmXml(doc) {
         }
     }
 }
+
 async function processXmlString(xt, typ, ovUrl=null){
     try{
         if(Recorder.isRecording && !isPlaying) Recorder.triggerXML(xt, typ);
@@ -1482,7 +1648,6 @@ async function processXmlString(xt, typ, ovUrl=null){
                         if(kn&&st) {
                             let wT_color = "#FFF";
                             let level = 0;
-                            // 視認性向上のため、黒背景での赤色を明るく(#FF5555)に修正
                             if (kn.includes("特別警報")) { wT_color = "#CC88FF"; level = 3; }
                             else if (kn.includes("警報")) { wT_color = "#FF5555"; level = 2; }
                             else if (kn.includes("注意報")) { wT_color = "#F2E700"; level = 1; }
@@ -1541,7 +1706,6 @@ async function processXmlString(xt, typ, ovUrl=null){
         const eEl=bdy?.querySelector('Earthquake'), intEl=bdy?.querySelector('Intensity');
         if(eEl||intEl){
             cFnd=true; ht+=`<div class="p-info-section p-section-earthquake"><h3>📳 地震情報</h3>`;
-            // 視認性向上のため、黒背景での赤色を明るく(#FF5555)に修正
             if(eEl){const cd=eEl.querySelector('Hypocenter > Area > Coordinate, Hypocenter > Area > jmx_eb\\:Coordinate'); ht+=`<div style="background:#0A0A0A; padding:12px; border:1px solid #444; border-radius:4px; margin-bottom:12px;"><strong>発生時刻:</strong> ${formatTimeXml(eEl.querySelector('OriginTime')?.textContent)}<br><strong>震央:</strong> ${eEl.querySelector('Hypocenter > Area > Name')?.textContent}<br><strong>深さ・座標:</strong> ${cd?cd.getAttribute('description'):'不明'}<br><strong>規模:</strong> <span style="font-size:1.2em; color:#FF5555; font-weight:700;">${eEl.querySelector('Magnitude, jmx_eb\\:Magnitude')?.getAttribute('description')||'M'+eEl.querySelector('Magnitude')?.textContent}</span></div>`;}
             if(intEl){const mx=intEl.querySelector('Observation > MaxInt')?.textContent; if(mx)ht+=`<p><strong>最大震度:</strong> <span style="font-size:1.4em; color:#FF5555; font-weight:700;">${mx}</span></p>`; const pr=intEl.querySelectorAll('Pref'); if(pr.length){ht+=`<h4>各地の震度</h4><div class="p-data-list">`; pr.forEach(p=>{ht+=`<div style="margin-bottom:8px;"><strong>${p.querySelector('Name')?.textContent} (最大 ${p.querySelector('MaxInt')?.textContent})</strong><ul style="list-style:none; margin:4px 0 0 10px; padding:0;">`; p.querySelectorAll('Area').forEach(a=>ht+=`<li>・${a.querySelector('Name')?.textContent} (震度 ${a.querySelector('MaxInt')?.textContent})</li>`); ht+=`</ul></div>`;}); ht+=`</div>`;}} ht+=`</div>`;
         }
@@ -2066,7 +2230,7 @@ function renderLatestPanel() {
             const sb = scaleColor(s0);
             const ct = e0.domesticTsunami === "Checking" ? `<span class="tag-checking">調査中</span>` : "";
             const dfs = s0.length > 1 ? (s0 === "不明" || s0 === "遠地" ? "24px" : "38px") : "52px";
-            // 白文字とオレンジ背景のコントラストを修正
+            
             let lpgmHtml = e0.maxLpgmInt ? `<span class="tag lpgm-tag" style="background:#FF6600;color:#000;">長周期 階級${e0.maxLpgmInt}</span>` : "";
             
             const mC = magColor(e0.hypocenter.magnitude);
@@ -2153,7 +2317,6 @@ function renderEewCards() {
         ${ah}
     `;
 
-    // 既存のマップDOMを破壊しないようにテキストコンテナのみ更新
     if (isNew) {
         cd.innerHTML = `
             <div class="eew-info-container">${infoHtml}</div>
@@ -2205,7 +2368,7 @@ function renderEewCards() {
                     }).addTo(m);
                     obj.marker = mk;
                 } else {
-                    mk.setLatLng([eL, eO]); // マーカー位置更新
+                    mk.setLatLng([eL, eO]);
                 }
             }
             m.invalidateSize();
@@ -2246,7 +2409,6 @@ async function updateWolfxEEW(d){
     
     let isN = !activeEEWs.has(id), pD = activeEEWs.get(id);
     
-    // 震源位置のフォールバック・引き継ぎ処理
     if (!isN && pD) {
         d.InitialLatitude = pD.InitialLatitude !== undefined ? pD.InitialLatitude : pD.Latitude;
         d.InitialLongitude = pD.InitialLongitude !== undefined ? pD.InitialLongitude : pD.Longitude;
@@ -3007,12 +3169,11 @@ function updateWeatherDisplay() {
     } 
 } 
 
-// --- 曜日/時間による天気ティッカー機能の統合 (n.html由来) ---
+// --- 曜日/時間による天気ティッカー機能の統合 ---
 const API_AREA_URL = "https://www.jma.go.jp/bosai/common/const/area.json";
 const API_FORECAST_BASE = "https://www.jma.go.jp/bosai/forecast/data/forecast/";
 const ICON_BASE_URL = "https://www.jma.go.jp/bosai/forecast/img/";
 
-// 現在時刻をもとに「対象の日付文字列」と「ラベル名」を決定
 function getTargetDateInfo() {
     const now = new Date();
     const currentHour = now.getHours();
@@ -3021,14 +3182,11 @@ function getTargetDateInfo() {
     let labelText = "";
 
     if (currentHour >= 21) {
-        // 21時〜23時は「明日の天気」
         targetDate.setDate(targetDate.getDate() + 1);
         labelText = "明日の全国天気";
     } else if (currentHour >= 17) {
-        // 17時〜20時は「今夜の天気」 (対象日は今日)
         labelText = "今夜の全国天気";
     } else {
-        // 0時〜16時は「今日の天気」 (対象日は今日)
         labelText = "今日の全国天気";
     }
 
@@ -3156,6 +3314,8 @@ async function initTicker() {
         }
     }
 }
+// 1時間ごとに天気を更新する
+setInterval(initTicker, 3600000);
 
 async function startApp(){
     try{
@@ -3173,6 +3333,10 @@ async function startApp(){
         connectP2P(); 
         connectWolfx(); 
         connectAxis(); 
+        
+        checkAutoMapSwap(); // 自動マップ切り替え起動チェック
+        fetchJAlert(); // J-ALERT初期チェック
+        
         updateStartupStatus("リアルタイムデータ取得中..."); 
         const d=await fetchKyoshin(); 
         if(d)drawKyoshin(d); 
