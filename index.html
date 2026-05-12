@@ -1391,8 +1391,13 @@ async function fetchJAlert() {
         return;
     }
     try {
-        const url = "https://emergency-weather.yahoo.co.jp/weather/jp/jalert/";
-        const res = await fetch("https://api.allorigins.win/get?url=" + encodeURIComponent(url));
+        // 先ほど作成したCloudflare WorkerのURLに書き換える
+        // （↓以下のURLを、あなたがコピーしたURLに置き換えてください）
+        const workerUrl = "https://jalert-proxy.epica-jalert.workers.dev/";
+        
+        const res = await fetch(workerUrl);
+        if (!res.ok) throw new Error("Proxy server error");
+        
         const json = await res.json();
         const html = json.contents;
         
