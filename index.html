@@ -1109,8 +1109,8 @@ function resetMapSwap() {
     if (isMapSwapped) toggleMapSwap();
 }
 
-let seFirst=new Audio('First.mp3'), seLast=new Audio('Last.mp3'), seTsunami=new Audio('Tsunami.mp3');
-let seUpdateApi=new Audio('UpdateAPI.mp3'), seUpdateEew=new Audio('UpdateEEW.mp3'), seWarning=new Audio('Warning.mp3');
+let seFirst=new Audio('Warning.mp3'), seLast=new Audio('Last.mp3'), seTsunami=new Audio('Tsunami.mp3');
+let seUpdateApi=new Audio('UpdateAPI.mp3'), seUpdateEew=new Audio('UpdateEEW.mp3'), seWarning=new Audio('First.mp3');
 let bgmFiles={'朝.wav':new Audio('朝.wav'), '昼.wav':new Audio('昼.wav'), '夕方.wav':new Audio('夕方.wav'), '夜.wav':new Audio('夜.wav')}; for(let k in bgmFiles)bgmFiles[k].loop=true;
 function updateSeVolumes(){ seFirst.volume=userSettings.volFirst; seLast.volume=userSettings.volLast; seTsunami.volume=userSettings.volTsunami; seUpdateApi.volume=userSettings.volUpdateApi; seUpdateEew.volume=userSettings.volUpdateEew; seWarning.volume=userSettings.volWarning; }
 
