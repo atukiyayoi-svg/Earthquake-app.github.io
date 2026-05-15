@@ -236,6 +236,27 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
 /* --- 揺れ検知パネル --- */
 #shakeDetectPanel { position: fixed; bottom: 60px; left: 12px; width: 420px; height: 190px; z-index: 150; display: none; border-top: 8px solid #00FF00; }
 
+/* --- 震源要素更新のお知らせ (改修) --- */
+#eqUpdatePanel { 
+    position: fixed !important; 
+    top: auto !important; 
+    bottom: 362px !important; 
+    left: 35% !important; 
+    transform: translateX(-50%) !important; 
+    width: 600px !important; 
+    height: auto !important; 
+    min-height: 150px; 
+    z-index: 10000; 
+    background: rgba(10, 10, 10, 0.98); 
+    border: 4px solid #FFD700; 
+    border-radius: 4px; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.8); 
+    display: none; 
+    flex-direction: column; 
+}
+#eqUpdatePanel .axisHeader { background: #111; color: #FFD700; font-size: 16px; padding: 12px 16px; border-bottom: 2px solid #555; }
+#eqUpdateText { padding: 16px; font-size: 15px; line-height: 1.6; color: #FFF; }
+
 /* --- 時計 --- */
 #clockPanel { width: 100%; background: rgba(0, 0, 0, 0.9); border: 2px solid #444; color: #fff; font-size: 28px; font-weight: 700; text-align: center; padding: 14px 0; z-index: 100; letter-spacing: 0.1em; border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.8); margin-bottom: 0px; box-sizing: border-box; }
 
@@ -294,6 +315,7 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
     #leftSidebar { order: 3; } #rightSidebar { order: 4; }
     #bottomPanelsContainer { position: relative !important; width: 100% !important; margin: 0 0 12px 0 !important; flex-direction: column; height: auto !important; order: 5; flex-shrink: 0; pointer-events: auto; left: auto !important; right: auto !important; top: auto !important; bottom: auto !important;}
     #bottomPanelsContainer > div { height: 300px !important; flex: none; margin-bottom: 12px; }
+    #eqUpdatePanel { position: relative !important; bottom: auto !important; left: auto !important; transform: none !important; width: 100% !important; margin: 0 0 12px 0 !important; order: 5; box-shadow: none; }
     #weatherTickerPanel { position: relative !important; width: 100% !important; margin: 0 0 12px 0 !important; order: 6; flex-shrink: 0; left: auto !important; right: auto !important; top: auto !important; bottom: auto !important;}
     #wsLogPanel { position: relative !important; width: 100% !important; margin: 0 0 12px 0 !important; order: 7; height: 120px; flex-shrink: 0; left: auto !important; right: auto !important; top: auto !important; bottom: auto !important;}
     #clockPanel { position: relative !important; width: 100% !important; margin: 0 !important; order: 8; flex-shrink: 0; left: auto !important; right: auto !important; top: auto !important; bottom: auto !important;}
@@ -377,11 +399,7 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
         <div id="summaryScrollArea" class="axisScrollArea"><div class="info-text" style="text-align:center;padding-top:20px;">待機中...</div></div>
     </div>
     
-    <div id="eqUpdatePanel" class="base-panel" style="display:none; border-top: 8px solid #FFD700; height: 190px;">
-        <div class="axisHeader" style="color: #FFD700;">震源要素更新のお知らせ</div>
-        <div id="eqUpdateText" style="padding: 12px; font-size:14px; line-height:1.5;"></div>
     </div>
-</div>
 
 <div id="shakeDetectPanel" class="base-panel">
     <div class="axisHeader" style="color: #00FF00;">揺れ検知情報 (SHAKE DETECTION)</div>
@@ -397,7 +415,12 @@ body { margin:0; background:#050505; overflow:hidden; font-family: "BIZ UDPGothi
         <div class="mega-quake-header">重大な地震情報 (MEGA QUAKE ALERT)</div>
         <div id="megaQuakeAlertScrollArea" class="mega-quake-scroll"><div class="info-text" style="text-align:center;padding-top:20px;">現在発表されている情報はありません</div></div>
     </div>
-    <div id="xmlPanel" class="base-panel">
+    <div id="xmlPanel" class="base-panel" style="position: relative;">
+        <div id="eqUpdatePanel" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2000; background: rgba(10, 10, 10, 0.98); border: 4px solid #FFD700; box-sizing: border-box; display: none; flex-direction: column;">
+            <div class="axisHeader" style="background: #111; color: #FFD700; font-size: 16px; padding: 10px 16px; border-bottom: 2px solid #555; font-weight: bold;">震源要素更新のお知らせ</div>
+            <div id="eqUpdateText" style="padding: 12px; font-size: 14px; line-height: 1.5; color: #FFF; overflow-y: auto; flex: 1;"></div>
+        </div>
+
         <div class="xmlHeader">気象庁防災情報XML (JMA XML) - 総合</div>
         <div id="xmlScrollArea"><div class="info-text" style="text-align:center;padding-top:20px;">情報を受信待機中...</div></div>
         <button id="btnXmlDetail">詳細を見る</button>
@@ -578,7 +601,6 @@ function applyStyleOptimized(layerGroup, styleComputeFn) {
     });
 }
 
-// --- グローバル変数追加 (連続音・アニメポーズ管理) ---
 let continuousPippiTimer = null;
 let animPauseUntil = 0;
 
@@ -604,7 +626,6 @@ function stopContinuousPippi() {
     }
 }
 
-// --- 0・1・2・9キー押下時のUI表示切替・ログ表示・再現 ---
 let isExtraButtonsHidden = false;
 document.addEventListener('keydown', e => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
@@ -645,7 +666,6 @@ document.addEventListener('keydown', e => {
     }
 });
 
-// --- 再現機能 (Recorder & Player) ---
 let isPlaying = false;
 let playbackTimeouts = [];
 let playbackRealStartTime = 0;
@@ -784,7 +804,6 @@ function handleSimulatedAPI(list) {
             speakText(getQuakeTTS(lE));
         }
         
-        // 確定報受信時にアニメーションの一時停止タイマーを設定
         if(lE.issue && lE.issue.type !== "ScalePrompt" && lE.issue.type !== "Destination") {
             animPauseUntil = Date.now() + 5 * 60 * 1000; 
         }
@@ -842,7 +861,6 @@ document.getElementById('btnReproduce').addEventListener('click', () => {
     }
 });
 
-// --- 最適化用 画像・変数の定義 ---
 const obsImages = {};
 ["1","2","3","4","50","55","60","65","7","_"].forEach(s => {
     let img = new Image();
@@ -926,7 +944,6 @@ function getPushIconDataURL(text, bgColor, textColor) {
     } catch(e) { return null; } 
 }
 
-// --- マップの入れ替え処理 ---
 let isMapSwapped = false;
 function toggleMapSwap() {
     const leafletWrap = document.getElementById('leafletWrap');
@@ -1258,7 +1275,6 @@ function playPippiBeep(){
     playN(0); playN(0.15);
 }
 
-// --- J-ALERT 取得機能 ---
 let activeJAlerts = new Map();
 let jalertHashList = new Set();
 
@@ -1451,7 +1467,7 @@ function handleHypocenterUpdateXml(doc){
     let nS=doc.querySelector('Body > Intensity > Observation > MaxInt')?.textContent||oS;
     
     const updatePanel = document.getElementById('eqUpdatePanel');
-    updatePanel.style.display='block';
+    updatePanel.style.display='flex'; // display:flexで表示
     
     document.getElementById('eqUpdateText').innerHTML=`<span style="color:#CCC;">発生時刻:</span> ${tS}<br><br><div style="display:flex;justify-content:space-around;align-items:center;background:#111;padding:14px;border-radius:4px; border:1px solid #444;"><div><span style="color:#CCC;font-size:12px;">[前]</span><br>${oP}<br>${oCoord}<br>震度${oS} / M${oM}</div><div style="font-size:28px;color:#00FF00;font-weight:bold;">⇒</div><div><span style="color:#00FF00;font-size:12px;">[後]</span><br>${hA}<br>${nCoord}<br>震度${nS} / M${nMS}</div></div>`;
     
@@ -1464,6 +1480,7 @@ function handleHypocenterUpdateXml(doc){
     speakText(`先ほど、${tS}ごろ${oP}で発生した最大震度${speakOS}、マグニチュード${oM}の地震について、震源要素が更新されました。震源地は${hA}、最大震度は${speakNS}、マグニチュードは${nMS}です。`);
 }
 
+// ★修正：LPGM（長周期地震動）のマッピング処理の正確化
 function handleLpgmXml(doc) {
     const bdy = doc.querySelector('Body');
     const eq = bdy?.querySelector('Earthquake');
@@ -1492,21 +1509,31 @@ function handleLpgmXml(doc) {
     window.lpgmDataMap.set(oR, lpgmData);
 
     let updated = false;
+    let targetQuake = null;
+    let minDiff = 300000; // 最大5分の許容範囲
+
+    // 全ての履歴地震の中から、最も発生時刻が近いものを1件だけ特定する
     window.latestFullQuakeList.forEach(q => {
         let qTime = new Date(q.earthquake.time.replace(/\//g, "-").replace(" ", "T")).getTime();
         let xTime = new Date(oR).getTime();
-        if (Math.abs(qTime - xTime) < 300000) { 
-            q.earthquake.maxLpgmInt = maxLgInt;
-            if (q.points) {
-                q.points.forEach(pt => {
-                    if (lpgmData.areas[pt.addr]) {
-                        pt.lpgmInt = lpgmData.areas[pt.addr];
-                    }
-                });
-            }
-            updated = true;
+        let diff = Math.abs(qTime - xTime);
+        if (diff < minDiff) {
+            minDiff = diff;
+            targetQuake = q;
         }
     });
+
+    if (targetQuake) {
+        targetQuake.earthquake.maxLpgmInt = maxLgInt;
+        if (targetQuake.points) {
+            targetQuake.points.forEach(pt => {
+                if (lpgmData.areas[pt.addr]) {
+                    pt.lpgmInt = lpgmData.areas[pt.addr];
+                }
+            });
+        }
+        updated = true;
+    }
 
     if (updated) {
         renderHistoryPanel();
@@ -2787,20 +2814,30 @@ async function loadQuakes(){
         
         currentQuakeList=ls.filter(x=>x.issue?.type!=="ScalePrompt"&&x.issue?.type!=="Destination"&&x.earthquake.maxScale!==-1&&x.earthquake.maxScale!=="-1").slice(0,30); 
         
-        window.latestFullQuakeList.forEach(q => {
-            let qTime = new Date(q.earthquake.time.replace(/\//g, "-").replace(" ", "T")).getTime();
-            for (let [oR, lpgm] of window.lpgmDataMap.entries()) {
-                let xTime = new Date(oR).getTime();
-                if (Math.abs(qTime - xTime) < 300000) {
-                    q.earthquake.maxLpgmInt = lpgm.maxLgInt;
-                    if (q.points) {
-                        q.points.forEach(pt => {
-                            if (lpgm.areas[pt.addr]) pt.lpgmInt = lpgm.areas[pt.addr];
-                        });
-                    }
+        // ★修正: LPGM（長周期地震動）のAPI履歴データ適用時も、1対1マッピングへ厳密化
+        for (let [oR, lpgm] of window.lpgmDataMap.entries()) {
+            let xTime = new Date(oR).getTime();
+            let minDiff = 300000;
+            let targetQuake = null;
+            
+            window.latestFullQuakeList.forEach(q => {
+                let qTime = new Date(q.earthquake.time.replace(/\//g, "-").replace(" ", "T")).getTime();
+                let diff = Math.abs(qTime - xTime);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    targetQuake = q;
+                }
+            });
+
+            if (targetQuake) {
+                targetQuake.earthquake.maxLpgmInt = lpgm.maxLgInt;
+                if (targetQuake.points) {
+                    targetQuake.points.forEach(pt => {
+                        if (lpgm.areas[pt.addr]) pt.lpgmInt = lpgm.areas[pt.addr];
+                    });
                 }
             }
-        });
+        }
 
         if(lE&&!isEEWActive){
             window.currentEarthquakeData=lE.earthquake; window.currentEarthquakePoints=lE.points; window.currentEarthquakeIssue=lE.issue; 
@@ -2810,10 +2847,8 @@ async function loadQuakes(){
             if(!selectedHistoryQuake) updateLeafletMap(lE.earthquake,lE.points,lE.issue, skipMapMove); 
         }
         
-        // 確定報受信時、アニメーションのポーズ時間を設定
         if(lE && lE.issue && lE.issue.type !== "ScalePrompt" && lE.issue.type !== "Destination") {
             let eqTime = new Date(lE.earthquake.time.replace(/\//g, "-").replace(" ", "T")).getTime();
-            // 現在時刻から5分間停止させる
             animPauseUntil = Date.now() + 5 * 60 * 1000;
         }
 
@@ -2875,7 +2910,6 @@ function updateStartupStatus(m){const e=document.getElementById("startupStatus")
 const CURRENT_VERSION="4.4.2", VERSION_CHECK_URL="https://raw.githubusercontent.com/atukiyayoi-svg/EPICA/refs/heads/main/version.json";
 async function checkSystemUpdate(){try{const r=await fetch(`${VERSION_CHECK_URL}?t=${Date.now()}`); if(!r.ok)return; const d=await r.json(), lV=d.version, sE=document.getElementById('startup-version'); if(sE)sE.innerText=lV; if(lV!==CURRENT_VERSION){if(confirm(`新しいバージョン（V${lV}）が利用可能です。\nアップデートして再読み込みしますか？`))window.location.reload(true);}}catch(e){}}
 
-// --- 年間地震アニメーション関連 ---
 let animMap = null;
 let annualQuakes = [];
 let isAnimFetching = false;
@@ -2955,9 +2989,8 @@ function runAnnualAnimation() {
     let qIndex = 0;
     
     function animLoop(now) {
-        // EEW受信中または確定報から5分以内の場合は一時停止
         if (isEEWActive || Date.now() < animPauseUntil) {
-            lastRealTime = now; // 経過時間を進めないようにリセット
+            lastRealTime = now; 
             animReqId = requestAnimationFrame(animLoop);
             return;
         }
@@ -3079,8 +3112,6 @@ styleSheet.innerText = `
 `;
 document.head.appendChild(styleSheet);
 
-
-// --- 気象図レーダー関連 ---
 let weatherMap = null;
 let hrpnsLayer = null;
 let thnsLayer = null;
@@ -3158,7 +3189,6 @@ function updateWeatherDisplay() {
     } 
 } 
 
-// --- 天気予報ティッカー機能の統合 ---
 const API_AREA_URL = "https://www.jma.go.jp/bosai/common/const/area.json";
 const API_FORECAST_BASE = "https://www.jma.go.jp/bosai/forecast/data/forecast/";
 const ICON_BASE_URL = "https://www.jma.go.jp/bosai/forecast/img/";
@@ -3194,9 +3224,7 @@ function extractDailyWeather(data, todayStr, tomorrowStr) {
             const defines = ts.timeDefines;
             const areas = ts.areas[0];
             
-            // Extract Today
             const idxToday = defines.findIndex(t => t.startsWith(todayStr));
-            // Extract Tomorrow
             const idxTomorrow = defines.findIndex(t => t.startsWith(tomorrowStr));
 
             if (idxToday !== -1) {
@@ -3325,7 +3353,6 @@ async function startApp(){
         initAnnualAnimation(); 
         initWeatherMap(); 
         
-        // --- 起動表示をスキップし、本画面へ直接遷移 ---
         document.getElementById("startupScreen").style.display="none"; 
         initAudio();
     }catch(e){
@@ -3334,10 +3361,8 @@ async function startApp(){
 } 
 
 document.addEventListener("DOMContentLoaded", ()=>{
-    // 起動表示アニメーション等をスキップし、即座に読み込み＆開始
     startApp(); 
     
-    // 以下は元々ボタン表示用だったが、念のため残しておく
     const btnStart = document.getElementById("btnStart");
     if(btnStart) {
         btnStart.addEventListener("click", ()=>{
