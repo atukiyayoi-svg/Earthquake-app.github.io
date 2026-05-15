@@ -15,6 +15,7 @@
         --accent-red: #ff4444;
         --accent-orange: #ff9900;
         --accent-green: #00c800;
+        --accent-purple: #a855f7;
         --border-color: rgba(255, 255, 255, 0.2);
     }
     
@@ -174,7 +175,7 @@
 
 <div class="container">
     <h1>EPICA 仕様書及び取扱説明書</h1>
-    <p style="text-align: center;">バージョン: <span id="ver-text">V4.2.0</span></p>
+    <p style="text-align: center;">バージョン: <span id="ver-text">V4.4.2 R.ver</span></p>
 
     <section>
         <h2>1. システム概要とアーキテクチャ (Detailed Architecture)</h2>
@@ -192,17 +193,21 @@
                     <b style="color:#fff;">防災科学技術研究所 (NIED)</b><br>
                     <span style="font-size:11px; color:#aaa;">強震観測網 (K-NET, KiK-net)<br>全国地震動予測地図 (J-SHIS)</span>
                 </div>
+                <div class="sys-node origin">
+                    <b style="color:#fff;">USGS</b><br>
+                    <span style="font-size:11px; color:#aaa;">世界の地震観測データ</span>
+                </div>
             </div>
             
             <div class="sys-arrow-down">↓</div>
             
             <div style="text-align:left; color:#888; font-size:11px; margin-bottom:5px;">■ 中継・配信API (Distribution APIs)</div>
             <div class="sys-row">
-                <div class="sys-node source"><b>Yahoo! API (Storage)</b><br>リアルタイム強震データ(JSON)</div>
+                <div class="sys-node source"><b>Yahoo! API</b><br>リアルタイム強震データ</div>
                 <div class="sys-node source"><b>P2Pquake API v2</b><br>地震履歴・津波警報エリア</div>
-                <div class="sys-node source"><b>Wolfx / AXIS API (WS)</b><br>EEW・気象・ニュース速報</div>
-                <div class="sys-node source"><b>気象庁 XML Feed</b><br>eqvol.xml / extra.xml</div>
-                <div class="sys-node source"><b>J-SHIS API V4</b><br>表層地盤増幅率(ARV)メッシュ</div>
+                <div class="sys-node source"><b>Wolfx / AXIS API</b><br>EEW・速報 (WS)</div>
+                <div class="sys-node source"><b>気象庁 APIs</b><br>XML Feed / レーダータイル / 天気予報</div>
+                <div class="sys-node source"><b>J-ALERT Proxy</b><br>国民保護情報取得用Worker</div>
             </div>
 
             <div class="sys-arrow-down">↓</div>
@@ -216,20 +221,19 @@
                             <b>【地震計算モジュール】</b><br>
                             ・P/S波到達円 リアルタイム演算<br>
                             ・距離減衰式予測計算 (ARV補正)<br>
-                            ・海域地震の最大震度オフセット処理<br>
                             ・LPGM (長周期地震動階級) 算出
                         </div>
                         <div>
                             <b>【解析・検知モジュール】</b><br>
                             ・強震データ クラスタリング揺れ検知<br>
-                            ・JMA XML リアルタイムパース・HTML変換<br>
+                            ・JMA XML 解析 / J-ALERT パース<br>
                             ・震源要素の更新差分検知
                         </div>
                         <div>
                             <b>【制御モジュール】</b><br>
-                            ・キューベースの音声合成 (Web Speech)<br>
-                            ・BGM/SE 時間帯・状態遷移管理<br>
-                            ・ユーザーカスタマイズ動的CSS適用
+                            ・データレコーディング・再生処理<br>
+                            ・キューベースの音声合成 (TTS)<br>
+                            ・BGM/SE 状態遷移管理
                         </div>
                     </div>
                 </div>
@@ -239,9 +243,8 @@
             
             <div style="text-align:left; color:#888; font-size:11px; margin-bottom:5px;">■ ユーザーインターフェース (Presentation Layer)</div>
             <div class="sys-row">
-                <div class="sys-node ui"><b>Leaflet Map (2D)</b><br>震度ポリゴン・Canvas波紋描画</div>
-                <div class="sys-node ui"><b>DOM Panels</b><br>情報カード・XML総合・気象警報</div>
-                <div class="sys-node ui"><b>Browser APIs</b><br>Web Audio (SE/BGM) / Notification (通知)</div>
+                <div class="sys-node ui"><b>Leaflet Maps</b><br>強震/EEWマップ・気象レーダー・年間アニメ</div>
+                <div class="sys-node ui"><b>DOM Panels</b><br>情報カード・XML・天気ティッカー</div>
             </div>
         </div>
     </section>
@@ -254,31 +257,31 @@
         <ol>
             <li><strong>ARVの取得:</strong> 各市区町村ポリゴンの中心座標を基に、J-SHIS APIから表層地盤増幅率(ARV)を取得。</li>
             <li><strong>距離減衰式の適用:</strong> 震源の深さ、マグニチュード、震源距離から工学的基盤の最大速度(PGV600)を計算し、ARVを乗算して地表の計測震度を予測します。</li>
-            <li><strong>海域オフセット補正:</strong> 震央が海域(isSea)の場合、気象庁発表の「最大予測震度」を下回る計算結果になった際、陸地との距離ギャップを埋めるためのオフセット値を動的に算出し加算します。</li>
+            <li><strong>海域オフセット補正:</strong> 震央が海域の場合、気象庁発表の「最大予測震度」を下回る計算結果になった際、陸地との距離ギャップを埋めるためのオフセット値を動的に算出し加算します。</li>
         </ol>
-        <div class="visual-demo">
-            <div class="eew-epi"></div>
-            <div class="eew-p-wave"></div>
-            <div class="eew-s-wave"></div>
-            <div style="position:absolute; bottom:10px; right:10px; color:#fff; font-size:12px; background:rgba(0,0,0,0.5); padding:2px 5px;">水色: P波 / 赤色: S波</div>
-        </div>
 
         <h3>強震モニタ 揺れ検知クラスタリング (Shake Detection)</h3>
         <p>Yahoo! API経由で取得した観測点データ（毎秒更新）を監視します。単発のノイズによる誤検知を防ぐため、独自のクラスタリング処理を実装しています。</p>
         <ul>
             <li>ユーザー設定閾値（デフォルト: 計測震度目安1.0以上）を超える観測点を抽出。</li>
-            <li>超過した観測点から<strong>半径40km以内</strong>に別の超過観測点が存在する場合のみ「有意な揺れ」として判定。</li>
-            <li>検知されたポイント群を包含するバウンディングボックスを計算し、マップを自動ズーム。同時にプッシュ通知とシステム音で発報します。</li>
+            <li>超過した観測点から<strong>半径40km以内</strong>に別の超過観測点が存在し、かつ4点以上の観測点で有意な揺れを検知した場合に発報。</li>
+            <li>ガイガー法に基づいた最適化により、揺れの検知時間差から高精度な<strong>震央推定</strong>を行います。</li>
         </ul>
-        <div class="visual-demo">
-            <div class="sd-grid">
-                <div class="sd-dot"></div><div class="sd-dot active"></div><div class="sd-dot active"></div><div class="sd-dot"></div><div class="sd-dot"></div>
-                <div class="sd-dot"></div><div class="sd-dot active"></div><div class="sd-dot active"></div><div class="sd-dot active"></div><div class="sd-dot"></div>
-                <div class="sd-dot"></div><div class="sd-dot"></div><div class="sd-dot active"></div><div class="sd-dot"></div><div class="sd-dot"></div>
-                <div class="sd-box"></div>
-            </div>
-            <div style="position:absolute; bottom:10px; right:10px; color:#fff; font-size:12px; background:rgba(0,0,0,0.5); padding:2px 5px;">隣接(40km以内)する複数点で閾値を超過した場合に発報</div>
-        </div>
+
+        <h3 style="color: var(--accent-purple); border-left-color: var(--accent-purple);">過去データの記録と再現機能 (Reproduction)</h3>
+        <p>有事の際、システムの動作状況をそのまま記録し、後から再現・検証することができる機能です。</p>
+        <ul>
+            <li>EEWを受信すると、受信の10秒前に遡って自動的に記録（レコーディング）を開始します。</li>
+            <li>記録データには、強震モニタのリアルタイムデータ、EEWの電文、気象庁APIの確定報、XML情報が含まれます。</li>
+            <li>確定報を受信後、一定時間経過で自動的に記録を終了し、JSONファイルとしてエクスポートします。後日インポートすることで、当時のマップ描画や音声案内を完全再現できます。</li>
+        </ul>
+
+        <h3 style="color: var(--accent-orange); border-left-color: var(--accent-orange);">年間地震活動アニメーション (Annual Animation)</h3>
+        <p>USGS APIから今年発生した地震データを取得し、経過時間に合わせて描画する機能です。</p>
+        <ul>
+            <li>右サイドバーの専用マップ上で、年始めからの地震発生状況をマグニチュードに応じた波紋エフェクトで視覚的に再現します。</li>
+            <li>地震活動の活発化や群発地震の推移を直感的に把握できます。</li>
+        </ul>
     </section>
 
     <section>
@@ -286,22 +289,23 @@
         
         <div class="feature-grid">
             <div>
-                <h3>左サイドバー (地震・津波・EEW)</h3>
+                <h3>左サイドバー・メイン画面</h3>
                 <ul>
                     <li><strong>最新情報パネル:</strong> 最新の地震の最大震度、震源地、M、深さを表示。津波調査中の場合は「調査中」バッジが点滅します。</li>
                     <li><strong>震度詳細パネル:</strong> 各都道府県・市区町村の観測震度を高い順にスクロール表示。</li>
-                    <li><strong>津波パネル:</strong> P2P APIと気象庁XMLの双方のデータを統合し、大津波警報・津波警報・注意報・予報のエリア、到達予想時刻、予想高さを表示。警報時は中央に「！津波逃げて！」が表示されます。</li>
+                    <li><strong>津波パネル:</strong> P2P APIと気象庁XMLの双方のデータを統合し、大津波警報・津波警報・注意報・予報のエリア、到達予想時刻、予想高さを表示。</li>
                     <li><strong>EEWコンテナ:</strong> 複数のEEWを同時に受信した場合、カード形式でスタック表示。PLUM法や訓練報のタグも識別します。</li>
+                    <li><strong>マップスワップ機能:</strong> メインの地震・EEWマップと、気象レーダーマップをクリック一つで入れ替えることが可能です。</li>
                 </ul>
             </div>
             <div>
-                <h3>右サイドバー (解析・速報・XML)</h3>
+                <h3>右サイドバー・各種速報</h3>
                 <ul>
-                    <li><strong>地震情報ウィンドウ:</strong> 過去30件の地震履歴。クリックでマップと左パネルに当時の状況を復元表示します。震源要素が更新された場合は自動で上書き修正されます。</li>
-                    <li><strong>予測長周期地震動階級 (LPGM):</strong> 地震の規模(M)と深さから階級（1〜4）を予測計算し点灯表示します。</li>
-                    <li><strong>気象庁防災情報XML (JMA XML) 総合:</strong> <code>eqvol.xml</code> 及び <code>extra.xml</code> を定期的にフェッチし、DOM解析。降灰予報、火山活動、その他の地域情報をHTML化して表示します。</li>
-                    <li><strong>気象警報・特別情報:</strong> 大雨警報等の気象警報、南海トラフ地震臨時情報、三陸沖後発地震注意情報を専用パネルに切り出してハイライト表示します。</li>
-                    <li><strong>ニュース速報 (AXIS API):</strong> AXIS WebSocketから流れてくる <code>breaking-news</code> チャンネルを受信し、画面下部に速報テロップとして表示します。</li>
+                    <li><strong>気象レーダー (RAIN / THUNDER):</strong> 気象庁の高解像度降水ナウキャスト(hrpns)と雷ナウキャスト(thns)のタイルを表示。1分おきに自動で表示モードが切り替わります。</li>
+                    <li><strong>天気予報ティッカー:</strong> 画面下部をスクロールするティッカーで、全国の今日・明日の天気、降水確率、最高/最低気温をリアルタイム表示します。</li>
+                    <li><strong>J-ALERT (国民保護情報):</strong> 弾道ミサイル情報や緊急警報を専用プロキシ経由で取得し、画面中央にポップアップ表示します。</li>
+                    <li><strong>地震情報ウィンドウ:</strong> 過去30件の地震履歴。クリックでマップと左パネルに当時の状況を復元表示。震源要素が更新された場合は自動で上書き修正されます。</li>
+                    <li><strong>気象庁防災情報XML (JMA XML) 総合:</strong> <code>eqvol.xml</code> 及び <code>extra.xml</code> を定期的にフェッチし解析。気象特別警報や南海トラフ地震臨時情報などをハイライトします。</li>
                 </ul>
             </div>
         </div>
@@ -314,27 +318,29 @@
         <ul>
             <li><strong>UI・外観設定:</strong> 
                 <ul>
-                    <li><strong>パネル別フォントサイズ:</strong> 最新情報、震度詳細、XMLパネルなど、各コンポーネントの文字サイズを独立して80%〜150%の間で調整可能。動的にCSSが生成・適用されます。</li>
-                    <li><strong>背景・震度カラーカスタム:</strong> アプリのベース背景色、および震度(1〜7)ごとのカラーコードを個別に指定可能。視認性のために文字色は背景色に応じて白/黒が自動計算されます。</li>
+                    <li><strong>ベースマップ(地図タイル)表示:</strong> 背景の地図タイルのON/OFF切り替え。</li>
+                    <li><strong>カラーカスタマイズ:</strong> アプリのベース背景色、海（マップ背景）の色、陸地のベースカラー（透過も可能）、および震度(1〜7)ごとのカラーコードを個別に指定可能。</li>
+                    <li><strong>パネル別フォントサイズ:</strong> 各コンポーネントの文字サイズを独立して80%〜150%の間で調整可能。</li>
                 </ul>
             </li>
             <li><strong>動作拡張・API設定:</strong>
                 <ul>
-                    <li>EEW予測マップのON/OFF、観測点アイコン（JMAマーカー）の表示。</li>
-                    <li>プッシュ通知 (Notification API) の有効化。バックグラウンドでもEEWや揺れ検知をOSネイティブの通知で受け取れます。</li>
+                    <li><strong>マップ自動切り替え:</strong> メインマップと気象マップを1分おきに自動でスワップする機能。</li>
+                    <li>J-ALERT(国民保護情報)の受信ON/OFF設定。</li>
+                    <li>プッシュ通知 (Notification API) の有効化。</li>
                     <li><strong>EEWソース切替:</strong> 無料の「Wolfx」と、有償トークン接続による「AXIS API」をシームレスに切り替え可能。</li>
+                </ul>
+            </li>
+            <li><strong>再現機能 (REPRODUCTION) 管理:</strong>
+                <ul>
+                    <li>ローカルに保存された記録データの手動エクスポート、および過去データのインポート機能。記録の強制終了ボタンも搭載。</li>
                 </ul>
             </li>
             <li><strong>音声・BGM管理:</strong>
                 <ul>
-                    <li>時刻連動BGM（朝・昼・夕・夜）。有事（EEW受信・津波警報）には自動でフェードアウトしてミュートされます。</li>
-                    <li>Web Speech APIによる自動読み上げ速度・ピッチの調整。</li>
-                    <li>各種通知SE（First.mp3, UpdateEEW.mp3 等）の音量を個別にスライダーで設定可能。</li>
-                </ul>
-            </li>
-            <li><strong>自動化機能:</strong>
-                <ul>
-                    <li><strong>本日のまとめ:</strong> 毎日23時50分に、その日の地震回数と最大震度を自動集計し、音声付きで専用パネルにレポートを表示します。</li>
+                    <li>時刻連動BGM（朝・昼・夕・夜）。有事には自動でフェードアウトしてミュートされます。</li>
+                    <li>Web Speech APIによる自動読み上げ速度・ピッチ・音量の調整。</li>
+                    <li>各種通知SEの音量を個別にスライダーで設定可能。</li>
                 </ul>
             </li>
         </ul>
@@ -346,7 +352,7 @@
             <p>本システム上で描画される以下の情報は、<strong>独自のアルゴリズムに基づく完全な「予測」ならびに「推定」であり、正確なものではありません。</strong></p>
             <ul style="color: #ffcccc; margin-top: 10px;">
                 <li><strong>P波・S波の伝播サークルの描画:</strong> 理論値に基づく簡易的な描画であり、実際の地震波の到達を保証するものではありません。</li>
-                <li><strong>J-SHISモデルを用いた「予測震度マップ」:</strong> 計算上の予測であり、地盤状況や断層の破壊過程により実際の観測震度とは大きく異なる場合があります。海域オフセットも経験則に基づく補正です。</li>
+                <li><strong>J-SHISモデルを用いた「予測震度マップ」:</strong> 計算上の予測であり、地盤状況や断層の破壊過程により実際の観測震度とは大きく異なる場合があります。</li>
                 <li><strong>予測長周期地震動階級 (LPGM):</strong> マグニチュードと深さから簡易算出された参考値です。</li>
             </ul>
             <p style="margin-top: 10px;">本システムの情報を用いて生じた、いかなる損害・トラブルについても作者は一切の責任を負いません。実際の避難行動や意思決定の際は、必ず<strong>気象庁や自治体が発表する公式の防災情報</strong>に従ってください。</p>
@@ -358,7 +364,6 @@
             <h3>⚖️ 法律関連の注意事項 (気象業務法について)</h3>
             <p>日本国内において、気象庁以外の者が独自の計算式を用いて「予測震度」を作成し、これを<strong>不特定多数の一般大衆に向けて配信・通知する行為</strong>は、気象業務法に基づく<strong>気象庁長官の「予報業務許可（地震動）」</strong>が必要となる場合があります。</p>
             <p style="margin-top: 10px;">本システムをローカル環境等で実行し、個人的に利用する範囲（自己完結型の処理）であれば問題ありませんが、本システムの画面をライブ配信したり、生成された予測震度マップを不特定多数へ二次配信したりする行為は、関係法令に抵触する恐れがあるため十分にご注意ください。</p>
-            <p style="margin-top: 5px; font-size: 14px;">※詳細については<a href="https://www.jma.go.jp/jma/kishou/minkan/kyoka.html" target="_blank">気象庁: 予報業務の許可について</a>をご確認ください。</p>
         </div>
     </section>
 
@@ -367,7 +372,7 @@
         
         <div class="credit-box">
             <h3>🎵 楽曲（BGM）について</h3>
-            <p>本システム内で時間帯に合わせて再生される通常音楽（朝.wav, 昼.wav, 夕方.wav, 夜.wav）は、以下のサイトの著作物を利用しています。</p>
+            <p>本システム内で時間帯に合わせて再生される通常音楽は、以下のサイトの著作物を利用しています。</p>
             <ul>
                 <li><strong>配布元:</strong> 創作堂さくら紅葉 (<a href="https://yukizakura.net/" target="_blank">https://yukizakura.net/</a>)</li>
             </ul>
@@ -375,19 +380,19 @@
 
         <div class="credit-box" style="border-color: var(--accent-red);">
             <h3>🔔 独自通知音に関する著作権保護</h3>
-            <p>システムに組み込まれている緊急地震速報の新規受信音等（<strong>First.mp3、UpdateEEW.mp3、Warning.mp3 等</strong>）は、本システムの作者が独自に作成したオリジナル音源です。</p>
-            <p style="color: #ffcccc; font-weight: bold; margin-top: 5px;">【禁止事項】<br>いかなる理由であっても、これらのオリジナル音源を作者の事前の許可なく第三者が抽出し、他のソフトウェア、動画、配信等で使用すること、および二次配布を行うことを固く禁じます。</p>
+            <p>システムに組み込まれている緊急地震速報の新規受信音等（First.mp3 等）は、作者が独自に作成したオリジナル音源です。<br>
+            <span style="color: #ffcccc;">許可なき抽出、他ソフトウェア等での使用、二次配布を固く禁じます。</span></p>
         </div>
         
         <div class="credit-box">
             <h3>🌐 取得API・データソースについて</h3>
             <ul>
-                <li><strong>気象庁 (JMA):</strong> 各種観測データ、EEW、防災情報XMLの大元</li>
-                <li><strong>防災科学技術研究所 (NIED):</strong> 強震観測網 (K-NET, KiK-net) データの大元</li>
+                <li><strong>気象庁 (JMA):</strong> 各種観測データ、EEW、防災情報XML、気象レーダータイル、天気予報API</li>
+                <li><strong>防災科学技術研究所 (NIED):</strong> 強震観測網データ、表層地盤増幅率(ARV)データ</li>
+                <li><strong>USGS (アメリカ地質調査所):</strong> 年間地震アニメーション用データ</li>
                 <li><strong>Yahoo! 防災速報:</strong> リアルタイム震度データ (NIEDデータの中継)</li>
                 <li><strong>P2P地震情報 API v2:</strong> 地震履歴一覧、津波警報エリア情報</li>
-                <li><strong>Wolfx API / AXIS API (Prioris):</strong> 緊急地震速報、気象・火山・ニュース速報</li>
-                <li><strong>防災科学技術研究所 J-SHIS API V4:</strong> 表層地盤増幅率(ARV)データ</li>
+                <li><strong>Wolfx API / AXIS API (Prioris):</strong> 緊急地震速報、気象・ニュース速報</li>
             </ul>
             <p style="font-size: 13px; margin-top:10px;">データの利用に関しては各配信元のオープンデータ利用規約に従ってください。</p>
         </div>
@@ -397,11 +402,10 @@
     fetch('version.json')
         .then(response => response.json())
         .then(data => {
+            // jsonがあればそちらを優先しますが、デフォルトはV4.4.2 R.verです。
             document.getElementById('ver-text').innerText = "V" + data.version;
         })
-        .catch(() => {
-            // ローカル実行時はデフォルトの V4.2.0 を維持
-        });
+        .catch(() => {});
     </script>
 
 </div>
