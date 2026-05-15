@@ -578,6 +578,32 @@ function applyStyleOptimized(layerGroup, styleComputeFn) {
     });
 }
 
+// --- グローバル変数追加 (連続音・アニメポーズ管理) ---
+let continuousPippiTimer = null;
+let animPauseUntil = 0;
+
+function startContinuousPippi() {
+    if (continuousPippiTimer) return;
+    continuousPippiTimer = setInterval(() => {
+        let shouldBeep = false;
+        activeEEWs.forEach(d => {
+            if (!d.isFinal && !d.isCancel) shouldBeep = true;
+        });
+        if (shouldBeep) {
+            playPippiBeep();
+        } else {
+            stopContinuousPippi();
+        }
+    }, 1000);
+}
+
+function stopContinuousPippi() {
+    if (continuousPippiTimer) {
+        clearInterval(continuousPippiTimer);
+        continuousPippiTimer = null;
+    }
+}
+
 // --- 0・1・2・9キー押下時のUI表示切替・ログ表示・再現 ---
 let isExtraButtonsHidden = false;
 document.addEventListener('keydown', e => {
@@ -586,7 +612,7 @@ document.addEventListener('keydown', e => {
     if(e.key === '0') {
         e.preventDefault();
         e.stopPropagation();
-        location.reload(); // 0キーで再読み込み（リロード）
+        location.reload(); 
     } else if(e.key === '1') {
         e.preventDefault();
         e.stopPropagation();
@@ -671,7 +697,6 @@ const Recorder = {
         clearTimeout(this.stopTimer);
         const recordDataStr = JSON.stringify({baseTime: this.baseTime, events: this.events});
         
-        // 自動エクスポート処理（確認アラートなし）
         try {
             const blob = new Blob([recordDataStr], {type: 'application/json'});
             const url = URL.createObjectURL(blob);
@@ -684,8 +709,6 @@ const Recorder = {
         } catch(e) {
             addLog("⏹ 記録終了。エクスポートに失敗しました。");
         }
-
-        // 保存完了後にローカルの一時データを削除する
         localStorage.removeItem('epica_recording');
     }
 };
@@ -760,6 +783,12 @@ function handleSimulatedAPI(list) {
             seUpdateApi.currentTime=0; seUpdateApi.play().catch(e=>{});
             speakText(getQuakeTTS(lE));
         }
+        
+        // 確定報受信時にアニメーションの一時停止タイマーを設定
+        if(lE.issue && lE.issue.type !== "ScalePrompt" && lE.issue.type !== "Destination") {
+            animPauseUntil = Date.now() + 5 * 60 * 1000; 
+        }
+
         renderHistoryPanel();
     }
 }
@@ -776,14 +805,13 @@ function stopPlayback() {
     addLog("⏹ 再現を終了しました。");
 }
 
-// エクスポート・インポートのイベントリスナー（アラートを削除）
 document.getElementById('btnExportRecord').addEventListener('click', () => {
     const data = localStorage.getItem('epica_recording');
-    if(!data) return; // データがない場合は何もしない
+    if(!data) return; 
     const blob = new Blob([data], {type: 'application/json'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = `EPICA_Record_${new Date().getTime()}.json`; a.click(); URL.revokeObjectURL(url);
-    localStorage.removeItem('epica_recording'); // エクスポート後に削除
+    localStorage.removeItem('epica_recording'); 
 });
 
 document.getElementById('btnImportRecord').addEventListener('click', () => document.getElementById('importRecordFile').click());
@@ -1317,7 +1345,6 @@ function updateMegaQuakeTelop() {
         }
     }
 }
-
 let processedXmlUrls=new Set(), xmlTsunamiData=null, xmlTsunamiGeojsonLayer=null;
 let lastFeedUpdateEqvol=0, lastFeedUpdateExtra=0, lastFeedUpdateEqvolL=0;
 let xmlBuffer={eqvol:[], extra:[]}, warnBuffer={extra:[]};
@@ -2171,7 +2198,7 @@ function renderLatestPanel() {
             const ct = e0.domesticTsunami === "Checking" ? `<span class="tag-checking">調査中</span>` : "";
             const dfs = s0.length > 1 ? (s0 === "不明" || s0 === "遠地" ? "24px" : "38px") : "52px";
             
-            let lpgmHtml = e0.maxLpgmInt ? `<span class="tag" style="background:#FF6600;color:#000;">予測長周期階級 <span style="font-size:1.4em;">${e0.maxLpgmInt}</span></span>` : "";
+            let lpgmHtml = e0.maxLpgmInt ? `<span class="tag" style="background:#FF6600;color:#000;">長周期階級 <span style="font-size:1.4em;">${e0.maxLpgmInt}</span></span>` : "";
             
             const mC = magColor(e0.hypocenter.magnitude);
             const dC = depthColor(e0.hypocenter.depth);
@@ -2245,7 +2272,7 @@ function renderEewCards() {
     const dCTc = getContrastColor(dC);
     
     const lpgmLv = calcLPGM(d.Magunitude, d.Depth);
-    let lpgmHtml = lpgmLv > 0 ? `<span class="tag" style="background:#FF6600;color:#000; font-weight:900; font-size:14px; border:none; padding:4px 8px;">予測長周期 <span style="font-size:1.4em;">${lpgmLv}</span></span>` : "";
+    let lpgmHtml = lpgmLv > 0 ? `<span class="tag" style="background:#FF6600;color:#000; font-weight:900; font-size:14px; border:none; padding:4px 8px;">予測長周期階級 <span style="font-size:1.4em;">${lpgmLv}</span></span>` : "";
     
     let eewSub = d.isCancel ? `<div class="eewEpicenter" style="color:#aaa; font-size:18px;">この緊急地震速報は取り消されました</div>` : `<div class="eewEpicenter">${d.Hypocenter}</div><div class="eewSubInfo"><span class="tag" style="background:${mC}; color:${mCTc}; font-weight:900; font-size:14px; border:none; padding:4px 8px;">M ${formatMagLarge(d.Magunitude)}</span><span class="tag" style="background:${dC}; color:${dCTc}; font-weight:900; font-size:14px; border:none; padding:4px 8px;">${formatDepthLarge(d.Depth)}</span>${lpgmHtml}</div>`;
 
@@ -2327,6 +2354,7 @@ function clearEEWDisplay(eid=null){
         if(activeEEWs.size===0){
             isEEWActive=false; stopEewRotationTimer(); renderLatestPanel(); eewPredictedStyles.clear(); eewRealtimeMaxLv.clear(); if(eewWaveTimer)cancelAnimationFrame(eewWaveTimer); eewWaveTimer=null; waveCanvas.getContext('2d').clearRect(0,0,waveCanvas.width,waveCanvas.height); const pu=document.getElementById("eewPopup"); if(pu)pu.style.display="none"; if(window.lastKyoshinData)renderKyoshinCanvas(window.lastKyoshinData); if(latestQuakeMarker)latestQuakeMarker.setOpacity((isRealtimeOnlyMode&&!selectedHistoryQuake)||isWeatherWarningMapMode?0:1); refreshMapDisplay(); updateTsunamiDisplay(currentTsunamiData,window.currentEarthquakeData);
             document.getElementById("eewContainer").innerHTML = "";
+            stopContinuousPippi();
         }
         else{
             if (activeEEWs.size === 1) stopEewRotationTimer();
@@ -2338,6 +2366,7 @@ function clearEEWDisplay(eid=null){
         eewMiniMaps.forEach(m=>m.map.remove()); eewMiniMaps.clear();
         if(window.lastKyoshinData)renderKyoshinCanvas(window.lastKyoshinData); if(latestQuakeMarker)latestQuakeMarker.setOpacity((isRealtimeOnlyMode&&!selectedHistoryQuake)||isWeatherWarningMapMode?0:1); refreshMapDisplay(); updateTsunamiDisplay(currentTsunamiData,window.currentEarthquakeData);
         renderLatestPanel();
+        stopContinuousPippi();
     }
 }
 
@@ -2347,7 +2376,6 @@ async function updateWolfxEEW(d){
     resetMapSwap();
     if(isShakeDetectActive) cancelShakeDetectImmediate();
     
-    // 新規EEW受信時に保存データを削除
     localStorage.removeItem('epica_recording');
 
     const id=d.EventID||"wfx-tmp";
@@ -2378,6 +2406,7 @@ async function updateWolfxEEW(d){
         isEEWActive = true;
         renderLatestPanel();
         renderEewCards();
+        stopContinuousPippi();
         setTimeout(()=>{addLog(`EEW [${id}] キャンセル。`); clearEEWDisplay(id); if(!isEEWActive)loadQuakes();}, 15000);
         return;
     }
@@ -2412,6 +2441,8 @@ async function updateWolfxEEW(d){
     
     isEEWActive=true; updateTsunamiDisplay(currentTsunamiData,window.currentEarthquakeData); if(latestQuakeMarker)latestQuakeMarker.setOpacity(0); window.currentObsPointsToDraw = []; renderObsCanvas(); activeEEWs.set(id,d);
     
+    startContinuousPippi();
+
     if (activeEEWs.size > 1 && !eewDisplayRotationTimer) startEewRotationTimer();
     renderLatestPanel();
     renderEewCards();
@@ -2779,6 +2810,13 @@ async function loadQuakes(){
             if(!selectedHistoryQuake) updateLeafletMap(lE.earthquake,lE.points,lE.issue, skipMapMove); 
         }
         
+        // 確定報受信時、アニメーションのポーズ時間を設定
+        if(lE && lE.issue && lE.issue.type !== "ScalePrompt" && lE.issue.type !== "Destination") {
+            let eqTime = new Date(lE.earthquake.time.replace(/\//g, "-").replace(" ", "T")).getTime();
+            // 現在時刻から5分間停止させる
+            animPauseUntil = Date.now() + 5 * 60 * 1000;
+        }
+
         updateTsunamiDisplay(td,lE?.earthquake); 
         renderHistoryPanel(); 
         isInitialLoad=false;
@@ -2917,6 +2955,13 @@ function runAnnualAnimation() {
     let qIndex = 0;
     
     function animLoop(now) {
+        // EEW受信中または確定報から5分以内の場合は一時停止
+        if (isEEWActive || Date.now() < animPauseUntil) {
+            lastRealTime = now; // 経過時間を進めないようにリセット
+            animReqId = requestAnimationFrame(animLoop);
+            return;
+        }
+
         const dt = now - lastRealTime;
         lastRealTime = now;
         
