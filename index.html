@@ -1129,7 +1129,21 @@ document.getElementById('chkMapLandTransparent').addEventListener('change', e =>
 });
 
 document.getElementById('chkPushNotify').checked=userSettings.pushNotify; document.getElementById('chkPushNotify').addEventListener('change', async e=>{if(e.target.checked){if(!("Notification" in window)){alert("非対応"); e.target.checked=false;}else{const p=await Notification.requestPermission(); if(p!=="granted"){alert("拒否されました"); e.target.checked=false;}}} userSettings.pushNotify=e.target.checked; saveSettings();});
-['chkEewPrediction','chkEewRealtimePaint','chkShakeDetect','chkEstimateEpicenter'].forEach(id=>{let el=document.getElementById(id); el.checked=userSettings[id.replace('chk','')]; el.addEventListener('change',e=>{userSettings[id.replace('chk','')]=e.target.checked; saveSettings();});});
+
+// ▼▼▼ ここから置き換えた部分 ▼▼▼
+['chkEewPrediction','chkEewRealtimePaint','chkShakeDetect','chkEstimateEpicenter'].forEach(id => {
+    let el = document.getElementById(id);
+    if(el) {
+        let key = id.replace('chk', '');
+        key = key.charAt(0).toLowerCase() + key.slice(1);
+        el.checked = userSettings[key];
+        el.addEventListener('change', e => {
+            userSettings[key] = e.target.checked;
+            saveSettings();
+        });
+    }
+});
+// ▲▲▲ ここまで置き換えた部分 ▲▲▲
 
 document.getElementById('chkJAlert').checked = userSettings.jAlertEnable;
 document.getElementById('chkJAlert').addEventListener('change', e => {
